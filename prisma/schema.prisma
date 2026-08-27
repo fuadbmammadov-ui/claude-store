@@ -20,6 +20,7 @@ enum Unit {
 enum PaymentType {
   CASH
   CARD
+  TRANSFER
   DEBT
 }
 
@@ -28,46 +29,99 @@ enum SaleStatus {
   DEBT
 }
 
+enum ReceiptStatus {
+  PAID
+  DEBT
+}
+
 model User {
-  id            Int            @id @default(autoincrement())
-  username      String         @unique
-  passwordHash  String
-  fullName      String
-  role          Role           @default(CASHIER)
-  active        Boolean        @default(true)
-  createdAt     DateTime       @default(now())
-  sales         Sale[]
-  stockReceipts StockReceipt[]
-  cashSessions  CashSession[]
-  debtPayments  DebtPayment[]
+  id               Int               @id @default(autoincrement())
+  username         String            @unique
+  passwordHash     String
+  fullName         String
+  role             Role              @default(CASHIER)
+  active           Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  sales            Sale[]
+  stockReceipts    StockReceipt[]
+  cashSessions     CashSession[]
+  debtPayments     DebtPayment[]
+  supplierPayments SupplierPayment[]
+  expenses         Expense[]
 }
 
 model Product {
-  id            Int            @id @default(autoincrement())
-  name          String
-  barcode       String         @unique
-  unit          Unit           @default(PIECE)
-  purchasePrice Decimal        @db.Decimal(12, 2)
-  salePrice     Decimal        @db.Decimal(12, 2)
-  quantity      Decimal        @db.Decimal(12, 3)
-  minStock      Decimal?       @db.Decimal(12, 3)
-  active        Boolean        @default(true)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  saleItems     SaleItem[]
+  id                Int            @id @default(autoincrement())
+  name              String
+  barcode           String         @unique
+  category          String?
+  subCategory       String?
+  unit              Unit           @default(PIECE)
+  purchasePrice     Decimal        @db.Decimal(12, 2)
+  salePrice         Decimal        @db.Decimal(12, 2)
+  quantity          Decimal        @db.Decimal(12, 3)
+  minStock          Decimal?       @db.Decimal(12, 3)
+  active            Boolean        @default(true)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  defaultSupplier   Supplier?      @relation(fields: [defaultSupplierId], references: [id])
+  defaultSupplierId Int?
+  saleItems         SaleItem[]
+  stockReceipts     StockReceipt[]
+}
+
+model Supplier {
+  id            Int               @id @default(autoincrement())
+  name          String            @unique
+  phone         String?
+  note          String?
+  createdAt     DateTime          @default(now())
+  products      Product[]
   stockReceipts StockReceipt[]
+  payments      SupplierPayment[]
 }
 
 model StockReceipt {
-  id            Int      @id @default(autoincrement())
-  product       Product  @relation(fields: [productId], references: [id])
-  productId     Int
-  quantity      Decimal  @db.Decimal(12, 3)
-  purchasePrice Decimal  @db.Decimal(12, 2)
-  supplierName  String?
-  receivedBy    User     @relation(fields: [receivedById], references: [id])
-  receivedById  Int
-  createdAt     DateTime @default(now())
+  id               Int               @id @default(autoincrement())
+  product          Product           @relation(fields: [productId], references: [id])
+  productId        Int
+  quantity         Decimal           @db.Decimal(12, 3)
+  purchasePrice    Decimal           @db.Decimal(12, 2)
+  totalAmount      Decimal           @db.Decimal(12, 2)
+  paidAmount       Decimal           @db.Decimal(12, 2)
+  status           ReceiptStatus     @default(PAID)
+  supplier         Supplier?         @relation(fields: [supplierId], references: [id])
+  supplierId       Int?
+  supplierName     String?
+  receivedBy       User              @relation(fields: [receivedById], references: [id])
+  receivedById     Int
+  createdAt        DateTime          @default(now())
+  supplierPayments SupplierPayment[]
+}
+
+model SupplierPayment {
+  id             Int          @id @default(autoincrement())
+  stockReceipt   StockReceipt @relation(fields: [stockReceiptId], references: [id])
+  stockReceiptId Int
+  supplier       Supplier     @relation(fields: [supplierId], references: [id])
+  supplierId     Int
+  amount         Decimal      @db.Decimal(12, 2)
+  method         PaymentType
+  paidBy         User         @relation(fields: [paidById], references: [id])
+  paidById       Int
+  paidAt         DateTime     @default(now())
+}
+
+model Expense {
+  id          Int         @id @default(autoincrement())
+  category    String
+  name        String
+  amount      Decimal     @db.Decimal(12, 2)
+  method      PaymentType
+  note        String?
+  createdBy   User        @relation(fields: [createdById], references: [id])
+  createdById Int
+  createdAt   DateTime    @default(now())
 }
 
 model Customer {
@@ -90,6 +144,7 @@ model Sale {
   totalAmount  Decimal       @db.Decimal(12, 2)
   paidAmount   Decimal       @db.Decimal(12, 2)
   status       SaleStatus
+  note         String?
   createdAt    DateTime      @default(now())
   items        SaleItem[]
   debtPayments DebtPayment[]
@@ -105,6 +160,7 @@ model SaleItem {
   unit          Unit
   quantity      Decimal @db.Decimal(12, 3)
   unitPrice     Decimal @db.Decimal(12, 2)
+  discount      Decimal @db.Decimal(12, 2) @default(0)
   purchasePrice Decimal @db.Decimal(12, 2)
   lineTotal     Decimal @db.Decimal(12, 2)
 }

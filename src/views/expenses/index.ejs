@@ -1,0 +1,99 @@
+<%- include('../partials/head', { title: 'Xərclər' }) %>
+<%- include('../partials/nav') %>
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Xərclər</h3>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#new-expense-modal">+ Yeni xərc</button>
+  </div>
+
+  <form class="mb-3" method="get" style="max-width: 220px;">
+    <input type="month" name="month" value="<%= monthValue %>" class="form-control" onchange="this.form.submit()">
+  </form>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card p-3 text-center">
+        <div class="text-muted small">Ümumi xərc</div>
+        <div class="fs-4 fw-bold text-danger"><%= money(total) %> ₼</div>
+      </div>
+    </div>
+    <% Object.entries(byCategory).forEach(([cat, amt]) => { %>
+    <div class="col-md-3">
+      <div class="card p-3 text-center">
+        <div class="text-muted small"><%= cat %></div>
+        <div class="fw-bold"><%= money(amt) %> ₼</div>
+      </div>
+    </div>
+    <% }) %>
+  </div>
+
+  <table class="table bg-white">
+    <thead><tr><th>Tarix</th><th>Kateqoriya</th><th>Ad</th><th>Məbləğ</th><th>Ödəniş</th><th>Qeyd</th><th>Əlavə edən</th><th></th></tr></thead>
+    <tbody>
+      <% expenses.forEach(e => { %>
+      <tr>
+        <td><%= new Date(e.createdAt).toLocaleDateString('az-AZ') %></td>
+        <td><%= e.category %></td>
+        <td><%= e.name %></td>
+        <td><%= money(e.amount) %> ₼</td>
+        <td><%= e.method === 'CASH' ? 'Nağd' : e.method === 'CARD' ? 'Kart' : 'Köçürmə' %></td>
+        <td><%= e.note || '-' %></td>
+        <td><%= e.createdBy.fullName %></td>
+        <td>
+          <form method="post" action="/expenses/<%= e.id %>?_method=DELETE" onsubmit="return confirm('Bu xərc silinsin?');">
+            <button class="btn btn-sm btn-outline-danger">Sil</button>
+          </form>
+        </td>
+      </tr>
+      <% }) %>
+      <% if (!expenses.length) { %>
+      <tr><td colspan="8" class="text-center text-muted py-4">Bu ayda xərc qeyd olunmayıb</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>
+
+<div class="modal" id="new-expense-modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="/expenses">
+        <div class="modal-header">
+          <h5 class="modal-title">Yeni xərc</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Kateqoriya</label>
+            <select name="category" class="form-select">
+              <% categories.forEach(c => { %><option value="<%= c %>"><%= c %></option><% }) %>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Ad / açıqlama</label>
+            <input type="text" name="name" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Məbləğ (₼)</label>
+            <input type="number" step="0.01" min="0.01" name="amount" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Ödəniş növü</label>
+            <select name="method" class="form-select">
+              <option value="CASH">Nağd</option>
+              <option value="CARD">Kart</option>
+              <option value="TRANSFER">Köçürmə</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Qeyd (könüllü)</label>
+            <input type="text" name="note" class="form-control">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Əlavə et</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<%- include('../partials/foot') %>

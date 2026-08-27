@@ -8,35 +8,31 @@ async function computeTotals(session) {
   const from = session.openedAt;
   const to = session.closedAt || new Date();
 
-  const [cashSales, cardSales, debtSales, cashDebtPayments, cardDebtPayments] = await Promise.all([
-    prisma.sale.aggregate({
-      _sum: { paidAmount: true },
-      where: { paymentType: 'CASH', createdAt: { gte: from, lte: to } },
-    }),
-    prisma.sale.aggregate({
-      _sum: { paidAmount: true },
-      where: { paymentType: 'CARD', createdAt: { gte: from, lte: to } },
-    }),
-    prisma.sale.aggregate({
-      _sum: { totalAmount: true },
-      where: { paymentType: 'DEBT', createdAt: { gte: from, lte: to } },
-    }),
-    prisma.debtPayment.aggregate({
-      _sum: { amount: true },
-      where: { method: 'CASH', paidAt: { gte: from, lte: to } },
-    }),
-    prisma.debtPayment.aggregate({
-      _sum: { amount: true },
-      where: { method: 'CARD', paidAt: { gte: from, lte: to } },
-    }),
+  const [
+    cashSales, cardSales, transferSales, debtSales,
+    cashDebtPayments, cardDebtPayments,
+    cashSupplierPayments,
+    cashExpenses,
+  ] = await Promise.all([
+    prisma.sale.aggregate({ _sum: { paidAmount: true }, where: { paymentType: 'CASH', createdAt: { gte: from, lte: to } } }),
+    prisma.sale.aggregate({ _sum: { paidAmount: true }, where: { paymentType: 'CARD', createdAt: { gte: from, lte: to } } }),
+    prisma.sale.aggregate({ _sum: { paidAmount: true }, where: { paymentType: 'TRANSFER', createdAt: { gte: from, lte: to } } }),
+    prisma.sale.aggregate({ _sum: { totalAmount: true }, where: { paymentType: 'DEBT', createdAt: { gte: from, lte: to } } }),
+    prisma.debtPayment.aggregate({ _sum: { amount: true }, where: { method: 'CASH', paidAt: { gte: from, lte: to } } }),
+    prisma.debtPayment.aggregate({ _sum: { amount: true }, where: { method: 'CARD', paidAt: { gte: from, lte: to } } }),
+    prisma.supplierPayment.aggregate({ _sum: { amount: true }, where: { method: 'CASH', paidAt: { gte: from, lte: to } } }),
+    prisma.expense.aggregate({ _sum: { amount: true }, where: { method: 'CASH', createdAt: { gte: from, lte: to } } }),
   ]);
 
   const cash = Number(cashSales._sum.paidAmount || 0) + Number(cashDebtPayments._sum.amount || 0);
   const card = Number(cardSales._sum.paidAmount || 0) + Number(cardDebtPayments._sum.amount || 0);
+  const transfer = Number(transferSales._sum.paidAmount || 0);
   const debt = Number(debtSales._sum.totalAmount || 0);
-  const expectedCash = Number(session.openingAmount) + cash;
+  const cashOutSupplier = Number(cashSupplierPayments._sum.amount || 0);
+  const cashOutExpenses = Number(cashExpenses._sum.amount || 0);
+  const expectedCash = Number(session.openingAmount) + cash - cashOutSupplier - cashOutExpenses;
 
-  return { cash, card, debt, expectedCash };
+  return { cash, card, transfer, debt, cashOutSupplier, cashOutExpenses, expectedCash };
 }
 
 router.get('/', asyncHandler(async (req, res) => {

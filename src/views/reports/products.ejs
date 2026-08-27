@@ -1,0 +1,39 @@
+<%- include('../partials/head', { title: 'Mal üzrə mənfəət' }) %>
+<%- include('../partials/nav') %>
+<div class="container-fluid py-4">
+  <h3>Mal üzrə satış və mənfəət</h3>
+  <%- include('_subnav', { active: 'products' }) %>
+
+  <form method="get" class="d-flex gap-2 mb-4" style="max-width: 300px;">
+    <select name="month" class="form-select" onchange="this.form.submit()">
+      <% for (let m = 1; m <= 12; m++) { %>
+      <option value="<%= m %>" <%= m === month ? 'selected' : '' %>><%= m %></option>
+      <% } %>
+    </select>
+    <select name="year" class="form-select" onchange="this.form.submit()">
+      <% for (let y = year - 2; y <= year + 1; y++) { %>
+      <option value="<%= y %>" <%= y === year ? 'selected' : '' %>><%= y %></option>
+      <% } %>
+    </select>
+  </form>
+
+  <table class="table table-hover bg-white">
+    <thead><tr><th>Mal</th><th>Satılan miqdar</th><th>Satış məbləği</th><th>Maya dəyəri</th><th>Mənfəət</th><th>Margin %</th></tr></thead>
+    <tbody>
+      <% rows.forEach(r => { %>
+      <tr>
+        <td><%= r.name %></td>
+        <td><%= r.qty.toFixed(3) %></td>
+        <td><%= money(r.revenue) %> ₼</td>
+        <td><%= money(r.cost) %> ₼</td>
+        <td class="<%= r.profit >= 0 ? 'text-success' : 'text-danger' %>"><%= money(r.profit) %> ₼</td>
+        <td><%= r.marginPct.toFixed(1) %>%</td>
+      </tr>
+      <% }) %>
+      <% if (!rows.length) { %>
+      <tr><td colspan="6" class="text-center text-muted py-4">Bu ayda satış yoxdur</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>
+<%- include('../partials/foot') %>

@@ -18,13 +18,69 @@ function toActive(rawActive) {
   return true;
 }
 
-async function main() {
-  const existingReceipts = await prisma.stockReceipt.count();
-  if (existingReceipts > 0) {
-    console.log('Köhnə mağaza məlumatları artıq import edilib, keçirilir.');
-    return;
+async function ensureSuppliers(names) {
+  const distinct = [...new Set(names.map((n) => (n || '').trim()).filter(Boolean))];
+  const nameToId = {};
+  for (const name of distinct) {
+    const existing = await prisma.supplier.findUnique({ where: { name } });
+    if (existing) {
+      nameToId[name] = existing.id;
+    } else {
+      const created = await prisma.supplier.create({ data: { name } });
+      nameToId[name] = created.id;
+    }
   }
+  return nameToId;
+}
 
+async function importExpenses(data, admin, warnings) {
+  const existingExpenses = await prisma.expense.count();
+  if (existingExpenses > 0 || !data.expenses || !data.expenses.length) return;
+
+  const validMethods = ['CASH', 'CARD', 'TRANSFER'];
+  const methodMap = { Nağd: 'CASH', Kart: 'CARD', Köçürmə: 'TRANSFER' };
+
+  let count = 0;
+  for (const e of data.expenses) {
+    if (!e.name || !e.amount) continue;
+    const method = methodMap[(e.method || '').trim()] || 'CASH';
+    await prisma.expense.create({
+      data: {
+        category: e.category || 'Digər',
+        name: e.name,
+        amount: round2(e.amount),
+        method: validMethods.includes(method) ? method : 'CASH',
+        note: e.note || null,
+        createdById: admin.id,
+        createdAt: new Date(`${e.date}T12:00:00Z`),
+      },
+    });
+    count++;
+  }
+  console.log(`${count} tarixi xərc qeydə alındı (Xərclər vərəqindən).`);
+}
+
+async function backfillProductCategories(data, warnings) {
+  let updated = 0;
+  for (const p of data.products) {
+    if (!p.name) continue;
+    const product = await prisma.product.findFirst({ where: { name: p.name } });
+    if (!product || product.category) continue;
+
+    const category = (p.category || '').trim() || null;
+    const subCategory = (p.altCategory || '').trim() || null;
+    if (!category && !subCategory) continue;
+
+    await prisma.product.update({
+      where: { id: product.id },
+      data: { category, subCategory },
+    });
+    updated++;
+  }
+  if (updated) console.log(`${updated} mövcud malın kateqoriyası dolduruldu.`);
+}
+
+async function main() {
   const dataPath = path.join(__dirname, 'legacy-data.json');
   if (!fs.existsSync(dataPath)) {
     console.log('legacy-data.json tapılmadı, import atlanıldı.');
@@ -38,10 +94,26 @@ async function main() {
     return;
   }
 
+  const warnings = [];
+
+  const supplierNames = [
+    ...data.products.map((p) => p.supplier),
+    ...data.receipts.map((r) => r.supplier),
+  ];
+  const supplierNameToId = await ensureSuppliers(supplierNames);
+
+  const existingReceipts = await prisma.stockReceipt.count();
+
+  if (existingReceipts > 0) {
+    console.log('Köhnə mağaza məlumatları artıq import edilib — mal/satış/qəbul idxalı keçirilir, yalnız əlavə məlumatlar tamamlanır.');
+    await backfillProductCategories(data, warnings);
+    await importExpenses(data, admin, warnings);
+    return;
+  }
+
   const receiptsSorted = [...data.receipts].filter((r) => r.product).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   const salesSorted = [...data.sales].filter((s) => s.product).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
-  // --- backfill maps: last known price per product name, in chronological order ---
   const lastPurchasePriceByName = {};
   receiptsSorted.forEach((r) => {
     const p = Number(r.unitPrice);
@@ -54,7 +126,6 @@ async function main() {
   });
 
   const nameToId = {};
-  const warnings = [];
   let created = 0;
 
   for (const p of data.products) {
@@ -73,12 +144,15 @@ async function main() {
       }
     }
     const minStock = p.minStock ? round3(p.minStock) : null;
+    const defaultSupplierId = supplierNameToId[(p.supplier || '').trim()] || null;
 
     const barcode = await generateUniqueBarcode();
 
     const product = await prisma.product.create({
       data: {
         name: p.name,
+        category: (p.category || '').trim() || null,
+        subCategory: (p.altCategory || '').trim() || null,
         barcode,
         unit,
         purchasePrice: round2(purchasePrice),
@@ -86,6 +160,7 @@ async function main() {
         quantity: 0,
         minStock,
         active: toActive(p.active),
+        defaultSupplierId,
       },
     });
     nameToId[p.name] = product.id;
@@ -93,13 +168,10 @@ async function main() {
   }
   console.log(`${created} mal yaradıldı (BirDad_Mini_ERP.xlsx-dən).`);
 
-  // Cari stoku (Anbar səhifəsindəki kimi) sadə cəm şəklində hesablamaq üçün — ardıcıllıqla
-  // artırıb-azaltmaq eyni günə aid sətirlərin sırası bəlli olmadığından yanlış nəticə verə bilər.
   const receivedTotal = {};
   const soldTotal = {};
   const lastPurchasePriceApplied = {};
 
-  // --- replay historical stock receipts (mal qəbulları) ---
   let receiptCount = 0;
   for (let i = 0; i < receiptsSorted.length; i++) {
     const r = receiptsSorted[i];
@@ -111,14 +183,22 @@ async function main() {
     const qty = round3(r.qty);
     if (!qty || qty <= 0) continue;
     const unitPrice = round2(r.unitPrice) || 0;
+    const totalAmount = round2(r.total) || round2(qty * unitPrice);
+    const isPaid = (r.status || '').trim() === 'Ödənilib';
+    const paidAmount = isPaid ? totalAmount : 0;
     const createdAt = new Date(`${r.date}T09:${String(i % 60).padStart(2, '0')}:00Z`);
+    const supplierId = supplierNameToId[(r.supplier || '').trim()] || null;
 
     await prisma.stockReceipt.create({
       data: {
         productId,
         quantity: qty,
         purchasePrice: unitPrice,
-        supplierName: r.supplier || null,
+        totalAmount,
+        paidAmount,
+        status: isPaid ? 'PAID' : 'DEBT',
+        supplierId,
+        supplierName: (r.supplier || '').trim() || null,
         receivedById: admin.id,
         createdAt,
       },
@@ -130,7 +210,6 @@ async function main() {
   }
   console.log(`${receiptCount} mal qəbulu qeydə alındı.`);
 
-  // --- replay historical sales (satışlar) ---
   let saleCount = 0;
   for (let i = 0; i < salesSorted.length; i++) {
     const s = salesSorted[i];
@@ -144,7 +223,8 @@ async function main() {
 
     const unit = toUnit(s.unit);
     const unitPrice = round2(s.unitPrice) || 0;
-    const lineTotal = round2(s.total) || round2(qty * unitPrice);
+    const discount = round2(s.discount) || 0;
+    const lineTotal = round2(s.total) || round2(qty * unitPrice - discount);
     const costTotal = round2(s.cost);
     const purchasePriceSnapshot = round2(costTotal / qty);
     const createdAt = new Date(`${s.date}T10:${String(i % 60).padStart(2, '0')}:00Z`);
@@ -165,6 +245,7 @@ async function main() {
               unit,
               quantity: qty,
               unitPrice,
+              discount,
               purchasePrice: purchasePriceSnapshot,
               lineTotal,
             },
@@ -178,7 +259,6 @@ async function main() {
   }
   console.log(`${saleCount} tarixi satış qeydə alındı.`);
 
-  // --- final stock reconciliation: bir dəfəlik cəm əsaslı yeniləmə ---
   for (const [name, productId] of Object.entries(nameToId)) {
     const finalQty = round3((receivedTotal[name] || 0) - (soldTotal[name] || 0));
     const updateData = { quantity: Math.max(0, finalQty) };
@@ -189,9 +269,6 @@ async function main() {
     }
   }
 
-  // --- opening cash session matching the spreadsheet's starting balance ---
-  // Yalnız heç bir kassa sessiyası (test daxil olmaqla) yoxdursa yaradılır ki, istifadəçinin
-  // özünün açdığı/bağladığı sessiya ilə toqquşma yaranmasın.
   const existingSessions = await prisma.cashSession.count();
   if (existingSessions === 0) {
     await prisma.cashSession.create({
@@ -206,6 +283,8 @@ async function main() {
   } else {
     console.log('Artıq mövcud kassa sessiyası var, yeni başlanğıc sessiyası yaradılmadı.');
   }
+
+  await importExpenses(data, admin, warnings);
 
   if (warnings.length) {
     console.log('\n--- DİQQƏT tələb edən qeydlər ---');

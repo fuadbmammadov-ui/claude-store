@@ -23,6 +23,7 @@ function addToCart(product) {
       name: product.name,
       unit: product.unit,
       unitPrice: Number(product.salePrice),
+      discount: 0,
       quantity: product.unit === 'KG' ? 0 : 1,
       maxQuantity: Number(product.quantity),
     });
@@ -34,17 +35,24 @@ function renderCart() {
   cartBody.innerHTML = '';
   let total = 0;
   cart.forEach((item, idx) => {
-    const lineTotal = item.quantity * item.unitPrice;
+    const lineTotal = Math.max(0, item.quantity * item.unitPrice - (item.discount || 0));
     total += lineTotal;
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${item.name}</td>
-      <td style="width: 110px;">
+      <td style="width: 100px;">
         <input type="number" step="${item.unit === 'KG' ? '0.001' : '1'}" min="0" value="${item.quantity}"
           class="form-control form-control-sm" onchange="updateQty(${idx}, this.value)">
         <small class="text-muted">${item.unit === 'KG' ? 'kq' : 'ədəd'}</small>
       </td>
-      <td>${money(item.unitPrice)}</td>
+      <td style="width: 90px;">
+        <input type="number" step="0.01" min="0" value="${item.unitPrice}"
+          class="form-control form-control-sm" onchange="updatePrice(${idx}, this.value)">
+      </td>
+      <td style="width: 90px;">
+        <input type="number" step="0.01" min="0" value="${item.discount || 0}"
+          class="form-control form-control-sm" onchange="updateDiscount(${idx}, this.value)">
+      </td>
       <td>${money(lineTotal)}</td>
       <td><button class="btn btn-sm btn-outline-danger" onclick="removeItem(${idx})">×</button></td>
     `;
@@ -56,6 +64,18 @@ function renderCart() {
 function updateQty(idx, value) {
   const q = parseFloat(value);
   cart[idx].quantity = isNaN(q) || q < 0 ? 0 : q;
+  renderCart();
+}
+
+function updatePrice(idx, value) {
+  const p = parseFloat(value);
+  cart[idx].unitPrice = isNaN(p) || p < 0 ? 0 : p;
+  renderCart();
+}
+
+function updateDiscount(idx, value) {
+  const d = parseFloat(value);
+  cart[idx].discount = isNaN(d) || d < 0 ? 0 : d;
   renderCart();
 }
 
@@ -126,10 +146,10 @@ function openPayModal(type) {
   document.getElementById('customer-search').value = '';
   document.getElementById('customer-results').innerHTML = '';
 
-  const total = cart.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
+  const total = cart.reduce((s, i) => s + Math.max(0, i.quantity * i.unitPrice - (i.discount || 0)), 0);
   document.getElementById('pay-modal-total').textContent = money(total);
 
-  const titles = { CASH: 'Nağd ödəniş', CARD: 'Kartla ödəniş', DEBT: 'Borca yazılır' };
+  const titles = { CASH: 'Nağd ödəniş', CARD: 'Kartla ödəniş', TRANSFER: 'Köçürmə ilə ödəniş', DEBT: 'Borca yazılır' };
   document.getElementById('pay-modal-title').textContent = titles[type];
   document.getElementById('customer-section').style.display = type === 'DEBT' ? 'block' : 'none';
 
@@ -165,8 +185,13 @@ document.getElementById('customer-search').addEventListener('input', function ()
 });
 
 async function submitCheckout() {
-  const items = cart.filter((c) => c.quantity > 0).map((c) => ({ productId: c.productId, quantity: c.quantity }));
-  const payload = { items, paymentType: currentPaymentType };
+  const items = cart.filter((c) => c.quantity > 0).map((c) => ({
+    productId: c.productId,
+    quantity: c.quantity,
+    unitPrice: c.unitPrice,
+    discount: c.discount || 0,
+  }));
+  const payload = { items, paymentType: currentPaymentType, note: document.getElementById('sale-note').value };
 
   if (currentPaymentType === 'DEBT') {
     if (selectedCustomerId) {
@@ -195,6 +220,7 @@ async function submitCheckout() {
     }
     bootstrap.Modal.getInstance(document.getElementById('pay-modal')).hide();
     cart = [];
+    document.getElementById('sale-note').value = '';
     renderCart();
     window.open('/pos/receipt/' + data.saleId, '_blank');
     barcodeInput.focus();

@@ -19,7 +19,7 @@
       <td colspan="3"><%= it.productName %></td>
     </tr>
     <tr>
-      <td><%= qty(it.quantity, it.unit) %> x <%= money(it.unitPrice) %></td>
+      <td><%= qty(it.quantity, it.unit) %> x <%= money(it.unitPrice) %><% if (Number(it.discount) > 0) { %> (-<%= money(it.discount) %>)<% } %></td>
       <td class="text-end"><%= money(it.lineTotal) %> ₼</td>
     </tr>
     <% }) %>
@@ -28,8 +28,11 @@
   <p class="text-end fw-bold">Yekun: <%= money(sale.totalAmount) %> ₼</p>
   <p class="text-end">
     Ödəniş növü:
-    <%= sale.paymentType === 'CASH' ? 'Nağd' : sale.paymentType === 'CARD' ? 'Kart' : 'Borc' %>
+    <%= sale.paymentType === 'CASH' ? 'Nağd' : sale.paymentType === 'CARD' ? 'Kart' : sale.paymentType === 'TRANSFER' ? 'Köçürmə' : 'Borc' %>
   </p>
+  <% if (sale.note) { %>
+  <p class="text-muted small">Qeyd: <%= sale.note %></p>
+  <% } %>
   <% if (sale.status === 'DEBT') { %>
   <p class="text-center text-danger">BORC YAZILIB</p>
   <% } %>

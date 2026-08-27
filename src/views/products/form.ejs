@@ -7,6 +7,16 @@
       <label class="form-label">Adı</label>
       <input type="text" name="name" class="form-control" value="<%= product ? product.name : '' %>" required>
     </div>
+    <div class="row">
+      <div class="col mb-3">
+        <label class="form-label">Kateqoriya (könüllü)</label>
+        <input type="text" name="category" class="form-control" value="<%= product && product.category ? product.category : '' %>">
+      </div>
+      <div class="col mb-3">
+        <label class="form-label">Alt kateqoriya (könüllü)</label>
+        <input type="text" name="subCategory" class="form-control" value="<%= product && product.subCategory ? product.subCategory : '' %>">
+      </div>
+    </div>
     <div class="mb-3">
       <label class="form-label">Barkod <span class="text-muted">(boş saxlasanız avtomatik yaradılır)</span></label>
       <input type="text" name="barcode" class="form-control" value="<%= product ? product.barcode : '' %>" <%= product ? 'required' : '' %>>
@@ -32,12 +42,19 @@
     <div class="row">
       <div class="col mb-3">
         <label class="form-label">İlkin miqdar</label>
-        <input type="number" step="0.001" min="0" name="quantity" class="form-control" value="0">
+        <input type="number" step="0.001" min="0" name="quantity" class="form-control" value="0" id="init-qty">
       </div>
       <div class="col mb-3">
         <label class="form-label">Təchizatçı (könüllü)</label>
-        <input type="text" name="supplierName" class="form-control">
+        <input type="text" name="supplierName" class="form-control" list="supplier-list">
+        <datalist id="supplier-list">
+          <% suppliers.forEach(s => { %><option value="<%= s.name %>"><% }) %>
+        </datalist>
       </div>
+    </div>
+    <div class="mb-3" id="paid-amount-wrap">
+      <label class="form-label">Təchizatçıya ödənilən məbləğ (₼) <span class="text-muted">(boş saxlasanız tam ödənilib sayılır)</span></label>
+      <input type="number" step="0.01" min="0" name="paidAmount" class="form-control" placeholder="tam">
     </div>
     <% } %>
     <div class="mb-3">

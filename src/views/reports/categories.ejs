@@ -1,0 +1,39 @@
+<%- include('../partials/head', { title: 'Kateqoriya üzrə satış' }) %>
+<%- include('../partials/nav') %>
+<div class="container-fluid py-4">
+  <h3>Kateqoriya üzrə satış</h3>
+  <%- include('_subnav', { active: 'categories' }) %>
+
+  <form method="get" class="d-flex gap-2 mb-4" style="max-width: 300px;">
+    <select name="month" class="form-select" onchange="this.form.submit()">
+      <% for (let m = 1; m <= 12; m++) { %>
+      <option value="<%= m %>" <%= m === month ? 'selected' : '' %>><%= m %></option>
+      <% } %>
+    </select>
+    <select name="year" class="form-select" onchange="this.form.submit()">
+      <% for (let y = year - 2; y <= year + 1; y++) { %>
+      <option value="<%= y %>" <%= y === year ? 'selected' : '' %>><%= y %></option>
+      <% } %>
+    </select>
+  </form>
+
+  <table class="table table-hover bg-white" style="max-width: 640px;">
+    <thead><tr><th>Kateqoriya</th><th>Satış məbləği</th><th>Pay</th></tr></thead>
+    <tbody>
+      <% rows.forEach(r => { %>
+      <tr>
+        <td><%= r.category %></td>
+        <td><%= money(r.revenue) %> ₼</td>
+        <td><%= total > 0 ? ((r.revenue / total) * 100).toFixed(1) : '0.0' %>%</td>
+      </tr>
+      <% }) %>
+      <% if (!rows.length) { %>
+      <tr><td colspan="3" class="text-center text-muted py-4">Bu ayda satış yoxdur</td></tr>
+      <% } %>
+    </tbody>
+    <% if (rows.length) { %>
+    <tfoot><tr class="fw-bold"><td>Cəmi</td><td><%= money(total) %> ₼</td><td>100%</td></tr></tfoot>
+    <% } %>
+  </table>
+</div>
+<%- include('../partials/foot') %>

@@ -18,14 +18,21 @@
     <div class="col-lg-5">
       <div class="card p-3">
         <h5>Səbət</h5>
-        <table class="table">
-          <thead><tr><th>Mal</th><th>Miqdar</th><th>Qiymət</th><th>Cəm</th><th></th></tr></thead>
-          <tbody id="cart-body"></tbody>
-        </table>
+        <div class="table-responsive">
+          <table class="table">
+            <thead><tr><th>Mal</th><th>Miqdar</th><th>Qiymət</th><th>Endirim</th><th>Cəm</th><th></th></tr></thead>
+            <tbody id="cart-body"></tbody>
+          </table>
+        </div>
         <h4 class="text-end">Yekun: <span id="cart-total">0.00</span> ₼</h4>
+        <div class="mb-3">
+          <label class="form-label">Qeyd (könüllü)</label>
+          <input type="text" id="sale-note" class="form-control" placeholder="Məs: müştəri qeydi...">
+        </div>
         <div class="d-grid gap-2">
           <button class="btn btn-success" onclick="openPayModal('CASH')">Nağd ödə</button>
           <button class="btn btn-primary" onclick="openPayModal('CARD')">Kartla ödə</button>
+          <button class="btn btn-info" onclick="openPayModal('TRANSFER')">Köçürmə ilə ödə</button>
           <button class="btn btn-warning" onclick="openPayModal('DEBT')">Borca yaz</button>
         </div>
       </div>

@@ -1,0 +1,25 @@
+<%- include('../partials/head', { title: 'Kritik stok' }) %>
+<%- include('../partials/nav') %>
+<div class="container-fluid py-4">
+  <h3>Anbar — kritik mallar</h3>
+  <%- include('_subnav', { active: 'critical' }) %>
+
+  <table class="table table-hover bg-white">
+    <thead><tr><th>Mal</th><th>Cari stok</th><th>Minimum</th><th>Çatışmazlıq</th><th></th></tr></thead>
+    <tbody>
+      <% critical.forEach(p => { %>
+      <tr class="table-warning">
+        <td><a href="/products/<%= p.id %>"><%= p.name %></a></td>
+        <td><%= qty(p.quantity, p.unit) %> <%= p.unit === 'KG' ? 'kq' : 'ədəd' %></td>
+        <td><%= qty(p.minStock, p.unit) %></td>
+        <td class="text-danger"><%= qty(Number(p.minStock) - Number(p.quantity), p.unit) %></td>
+        <td><a href="/products/<%= p.id %>/receive" class="btn btn-sm btn-success">Mal qəbulu</a></td>
+      </tr>
+      <% }) %>
+      <% if (!critical.length) { %>
+      <tr><td colspan="5" class="text-center text-muted py-4">Kritik səviyyədə mal yoxdur</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>
+<%- include('../partials/foot') %>

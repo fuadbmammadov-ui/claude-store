@@ -7,11 +7,15 @@ Kiçik mağaza üçün satış, mal qəbulu, borc və kassa idarəetmə sistemi.
 - Giriş/şifrə ilə autentifikasiya, iki rol: **Admin** (tam səlahiyyət) və **Satıcı** (mal qəbulu + satış)
 - Mal qəbulu: alış qiyməti, satış qiyməti, miqdar, ölçü vahidi (ədəd / kq)
 - Mal qəbulunda barkodun avtomatik yaradılması və kiçik ölçülü (50x30mm) etiket çapı
-- Satış (POS): barkod skaneri ilə və ya adla axtarışla, nağd / kartla / borca yazma
+- Satış (POS): barkod skaneri ilə və ya adla axtarışla, hər sətirdə qiymət/endirim dəyişdirmə, nağd / kartla / köçürmə / borca yazma
 - Müştəri məlumatları (ad, telefon) borc satışlarında qeydə alınır
-- Borc idarəetməsi: müştəri üzrə ümumi borc, qismən/tam ödəniş qeydiyyatı
-- Kassa: açılış məbləği, gün ərzində nağd/kart/borc məbləğləri, kassada olmalı nağd hesablanması, bağlanışda faktiki say ilə müqayisə
-- Günlük hesabat (yalnız Admin): satışlar, mal qəbulları, gündəlik qazanc (marja)
+- Müştəri borc idarəetməsi: ümumi borc, qismən/tam ödəniş qeydiyyatı
+- Təchizatçı idarəetməsi: mal qəbulunda ödənilib/borclu statusu, təchizatçı üzrə borcumuzun izlənməsi və ödəniş qeydiyyatı (yalnız Admin)
+- Xərc idarəetməsi (yalnız Admin): icarə, maaş, kommunal və s. xərclərin kateqoriya üzrə qeydiyyatı
+- Mal kateqoriya/alt-kateqoriya təsnifatı
+- Kassa: açılış məbləği, nağd/kart/köçürmə/borc məbləğləri, nağd xərc/təchizatçı ödənişlərinin çıxılması ilə kassada olmalı nağd hesablanması, bağlanışda faktiki say ilə müqayisə
+- Hesabatlar (yalnız Admin): günlük hesabat, aylıq maliyyə analizi (gross/net mənfəət, margin, break-even, inventory turnover), mal üzrə mənfəət, kateqoriya üzrə satış, kritik stok
+- Panel: aylıq mənfəət/zərər statusu, ən çox satılan və ən çox mənfəətli mallar
 
 ## Texnologiya
 

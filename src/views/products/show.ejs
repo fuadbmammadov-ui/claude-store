@@ -5,6 +5,9 @@
     <div>
       <h3><%= product.name %></h3>
       <p class="text-muted mb-1">Barkod: <code><%= product.barcode %></code></p>
+      <% if (product.category) { %>
+      <p class="text-muted mb-1">Kateqoriya: <%= product.category %><% if (product.subCategory) { %> / <%= product.subCategory %><% } %></p>
+      <% } %>
       <p>Qalıq: <strong><%= qty(product.quantity, product.unit) %> <%= product.unit === 'KG' ? 'kq' : 'ədəd' %></strong></p>
       <p>Alış: <%= money(product.purchasePrice) %> ₼ &nbsp;|&nbsp; Satış: <%= money(product.salePrice) %> ₼</p>
     </div>
@@ -22,19 +25,26 @@
 
   <h5 class="mt-4">Son mal qəbulları</h5>
   <table class="table bg-white">
-    <thead><tr><th>Tarix</th><th>Miqdar</th><th>Alış qiyməti</th><th>Təchizatçı</th><th>Qəbul edən</th></tr></thead>
+    <thead><tr><th>Tarix</th><th>Miqdar</th><th>Alış qiyməti</th><th>Təchizatçı</th><th>Ödəniş</th><th>Qəbul edən</th></tr></thead>
     <tbody>
       <% product.stockReceipts.forEach(r => { %>
       <tr>
         <td><%= new Date(r.createdAt).toLocaleString('az-AZ') %></td>
         <td><%= qty(r.quantity, product.unit) %></td>
         <td><%= money(r.purchasePrice) %> ₼</td>
-        <td><%= r.supplierName || '-' %></td>
+        <td><%= r.supplier ? r.supplier.name : (r.supplierName || '-') %></td>
+        <td>
+          <% if (r.status === 'PAID') { %>
+            <span class="badge bg-success">Ödənilib</span>
+          <% } else { %>
+            <span class="badge bg-danger">Borc: <%= money(Number(r.totalAmount) - Number(r.paidAmount)) %> ₼</span>
+          <% } %>
+        </td>
         <td><%= r.receivedBy.fullName %></td>
       </tr>
       <% }) %>
       <% if (!product.stockReceipts.length) { %>
-      <tr><td colspan="5" class="text-center text-muted">Qeyd yoxdur</td></tr>
+      <tr><td colspan="6" class="text-center text-muted">Qeyd yoxdur</td></tr>
       <% } %>
     </tbody>
   </table>

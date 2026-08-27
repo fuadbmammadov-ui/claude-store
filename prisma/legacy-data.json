@@ -218,5 +218,14 @@
   {"date": "2026-08-26", "saleNo": "S-057", "product": "Çolpa", "qty": "5", "unit": "ədəd", "unitPrice": "11", "discount": "0", "total": "55", "cost": "55", "payment": "", "note": ""},
   {"date": "2026-08-26", "saleNo": "S-058", "product": "Təbii bal  1 kg", "qty": "2", "unit": "ədəd", "unitPrice": "30", "discount": "0", "total": "60", "cost": "40", "payment": "", "note": ""},
   {"date": "2026-08-26", "saleNo": "S-059", "product": "Qaymaq camış 0.5", "qty": "1", "unit": "ədəd", "unitPrice": "13", "discount": "0", "total": "13", "cost": "11", "payment": "", "note": ""}
+],
+"expenses": [
+  {"date": "2026-08-01", "category": "İcarə", "name": "Avqust icarə haqqı", "amount": "400", "method": "Nağd", "note": "95"},
+  {"date": "2026-08-01", "category": "İşçi maaşı", "name": "Satıcı maaşı", "amount": "600", "method": "Nağd", "note": "133"},
+  {"date": "2026-08-06", "category": "Elektrik", "name": "İyul-Avqust elektrik", "amount": "100", "method": "Nağd", "note": "137"},
+  {"date": "2026-08-09", "category": "İnternet", "name": "Aylıq internet", "amount": "30", "method": "Nağd", "note": "141"},
+  {"date": "2026-08-11", "category": "Reklam", "name": "Instagram reklam", "amount": "50", "method": "Nağd", "note": "143"},
+  {"date": "2026-08-16", "category": "Qablaşdırma", "name": "Torba və qablar", "amount": "40", "method": "Nağd", "note": "145"},
+  {"date": "2026-08-19", "category": "Nəqliyyat", "name": "Məhsul gətirmə", "amount": "45", "method": "Nağd", "note": "147"}
 ]
 }

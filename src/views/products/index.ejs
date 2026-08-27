@@ -6,8 +6,21 @@
     <a href="/products/new" class="btn btn-primary">+ Yeni mal / Mal qəbulu</a>
   </div>
 
-  <form class="mb-3" method="get" action="/products">
-    <input type="text" name="q" value="<%= q %>" class="form-control" placeholder="Ad və ya barkod üzrə axtar...">
+  <form class="row g-2 mb-3" method="get" action="/products">
+    <div class="col-md-8">
+      <input type="text" name="q" value="<%= q %>" class="form-control" placeholder="Ad və ya barkod üzrə axtar...">
+    </div>
+    <div class="col-md-3">
+      <select name="category" class="form-select" onchange="this.form.submit()">
+        <option value="">Bütün kateqoriyalar</option>
+        <% categories.forEach(c => { %>
+        <option value="<%= c %>" <%= category === c ? 'selected' : '' %>><%= c %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="col-md-1">
+      <button type="submit" class="btn btn-outline-secondary w-100">Axtar</button>
+    </div>
   </form>
 
   <div class="table-responsive">
@@ -15,6 +28,7 @@
       <thead>
         <tr>
           <th>Ad</th>
+          <th>Kateqoriya</th>
           <th>Barkod</th>
           <th>Ölçü</th>
           <th>Alış qiyməti</th>
@@ -27,6 +41,7 @@
         <% products.forEach(p => { %>
         <tr class="<%= p.minStock && Number(p.quantity) <= Number(p.minStock) ? 'table-warning' : '' %>">
           <td><a href="/products/<%= p.id %>"><%= p.name %></a></td>
+          <td><%= p.category || '-' %><% if (p.subCategory) { %> / <%= p.subCategory %><% } %></td>
           <td><code><%= p.barcode %></code></td>
           <td><%= p.unit === 'KG' ? 'kq' : 'ədəd' %></td>
           <td><%= money(p.purchasePrice) %> ₼</td>
@@ -39,7 +54,7 @@
         </tr>
         <% }) %>
         <% if (!products.length) { %>
-        <tr><td colspan="7" class="text-center text-muted py-4">Mal tapılmadı</td></tr>
+        <tr><td colspan="8" class="text-center text-muted py-4">Mal tapılmadı</td></tr>
         <% } %>
       </tbody>
     </table>

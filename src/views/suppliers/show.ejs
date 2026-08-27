@@ -1,0 +1,67 @@
+<%- include('../partials/head', { title: supplier.name }) %>
+<%- include('../partials/nav') %>
+<div class="container py-4">
+  <h3><%= supplier.name %></h3>
+  <p class="text-muted"><%= supplier.phone || 'Telefon qeyd olunmayıb' %></p>
+  <p>Bizim borcumuz:
+    <span class="badge <%= outstanding > 0 ? 'bg-danger' : 'bg-success' %>"><%= money(outstanding) %> ₼</span>
+  </p>
+
+  <% if (outstanding > 0 && currentUser.role === 'ADMIN') { %>
+  <form method="post" action="/suppliers/<%= supplier.id %>/payments" class="card p-3 mb-4" style="max-width: 420px;">
+    <h6>Təchizatçıya ödəniş qeydə al</h6>
+    <div class="mb-2">
+      <label class="form-label">Məbləğ (₼)</label>
+      <input type="number" step="0.01" min="0.01" max="<%= outstanding %>" name="amount" class="form-control" required>
+    </div>
+    <div class="mb-2">
+      <label class="form-label">Ödəniş növü</label>
+      <select name="method" class="form-select">
+        <option value="CASH">Nağd</option>
+        <option value="CARD">Kart</option>
+        <option value="TRANSFER">Köçürmə</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-success">Ödənişi qeydə al</button>
+  </form>
+  <% } %>
+
+  <h5>Mal qəbulu tarixçəsi</h5>
+  <table class="table bg-white">
+    <thead><tr><th>Tarix</th><th>Mal</th><th>Miqdar</th><th>Cəm</th><th>Ödənilib</th><th>Status</th></tr></thead>
+    <tbody>
+      <% supplier.stockReceipts.forEach(r => { %>
+      <tr>
+        <td><%= new Date(r.createdAt).toLocaleString('az-AZ') %></td>
+        <td><a href="/products/<%= r.product.id %>"><%= r.product.name %></a></td>
+        <td><%= qty(r.quantity, r.product.unit) %></td>
+        <td><%= money(r.totalAmount) %> ₼</td>
+        <td><%= money(r.paidAmount) %> ₼</td>
+        <td><%= r.status === 'PAID' ? 'Ödənilib' : 'Borc' %></td>
+      </tr>
+      <% }) %>
+      <% if (!supplier.stockReceipts.length) { %>
+      <tr><td colspan="6" class="text-center text-muted">Qeyd yoxdur</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+
+  <h5>Ödəniş tarixçəsi</h5>
+  <table class="table bg-white">
+    <thead><tr><th>Tarix</th><th>Məbləğ</th><th>Növ</th><th>Ödəyən</th></tr></thead>
+    <tbody>
+      <% supplier.payments.forEach(p => { %>
+      <tr>
+        <td><%= new Date(p.paidAt).toLocaleString('az-AZ') %></td>
+        <td><%= money(p.amount) %> ₼</td>
+        <td><%= p.method === 'CASH' ? 'Nağd' : p.method === 'CARD' ? 'Kart' : 'Köçürmə' %></td>
+        <td><%= p.paidBy.fullName %></td>
+      </tr>
+      <% }) %>
+      <% if (!supplier.payments.length) { %>
+      <tr><td colspan="4" class="text-center text-muted">Qeyd yoxdur</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>
+<%- include('../partials/foot') %>

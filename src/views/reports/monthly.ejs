@@ -1,0 +1,64 @@
+<%- include('../partials/head', { title: 'Aylıq maliyyə analizi' }) %>
+<%- include('../partials/nav') %>
+<div class="container-fluid py-4">
+  <h3>Aylıq maliyyə analizi</h3>
+  <%- include('_subnav', { active: 'monthly' }) %>
+
+  <form method="get" class="d-flex gap-2 mb-4" style="max-width: 300px;">
+    <select name="month" class="form-select" onchange="this.form.submit()">
+      <% for (let m = 1; m <= 12; m++) { %>
+      <option value="<%= m %>" <%= m === month ? 'selected' : '' %>><%= m %></option>
+      <% } %>
+    </select>
+    <select name="year" class="form-select" onchange="this.form.submit()">
+      <% for (let y = year - 2; y <= year + 1; y++) { %>
+      <option value="<%= y %>" <%= y === year ? 'selected' : '' %>><%= y %></option>
+      <% } %>
+    </select>
+  </form>
+
+  <div class="alert <%= netProfit >= 0 ? 'alert-success' : 'alert-danger' %> fw-bold">
+    Mağaza vəziyyəti: <%= status %>
+  </div>
+
+  <h5>Əsas maliyyə göstəriciləri</h5>
+  <table class="table bg-white" style="max-width: 640px;">
+    <tbody>
+      <tr><td>Ümumi satış</td><td class="text-end"><%= money(revenue) %> ₼</td></tr>
+      <tr><td>Satılan malların maya dəyəri (COGS)</td><td class="text-end"><%= money(cogs) %> ₼</td></tr>
+      <tr><td>Gross Profit</td><td class="text-end"><%= money(grossProfit) %> ₼</td></tr>
+      <tr><td>Gross Margin %</td><td class="text-end"><%= grossMarginPct.toFixed(1) %>%</td></tr>
+      <tr><td>Əməliyyat xərcləri</td><td class="text-end text-danger"><%= money(expenseTotal) %> ₼</td></tr>
+      <tr class="table-primary fw-bold"><td>Net Profit</td><td class="text-end"><%= money(netProfit) %> ₼</td></tr>
+      <tr><td>Net Profit Margin %</td><td class="text-end"><%= netMarginPct.toFixed(1) %>%</td></tr>
+      <tr><td>Nağd satışlar</td><td class="text-end"><%= money(cashSales) %> ₼</td></tr>
+      <tr><td>Kart satışları</td><td class="text-end"><%= money(cardSales) %> ₼</td></tr>
+      <tr><td>Köçürmə satışları</td><td class="text-end"><%= money(transferSales) %> ₼</td></tr>
+      <tr><td>Borca yazılan</td><td class="text-end text-danger"><%= money(debtSales) %> ₼</td></tr>
+      <tr><td>Təchizatçı borcları (ümumi)</td><td class="text-end text-danger"><%= money(supplierDebtTotal) %> ₼</td></tr>
+      <tr><td>Anbarın dəyəri</td><td class="text-end"><%= money(inventoryValue) %> ₼</td></tr>
+      <tr><td>Cash Flow (təxmini)</td><td class="text-end"><%= money(cashFlowEstimate) %> ₼</td></tr>
+    </tbody>
+  </table>
+
+  <h5 class="mt-4">Break-even analizi</h5>
+  <table class="table bg-white" style="max-width: 640px;">
+    <tbody>
+      <tr><td>Aylıq sabit xərclər (təxmini)</td><td class="text-end"><%= money(fixedCosts) %> ₼</td></tr>
+      <tr><td>Orta Gross Margin %</td><td class="text-end"><%= grossMarginPct.toFixed(1) %>%</td></tr>
+      <tr><td>Break-even satış (aylıq)</td><td class="text-end"><%= money(breakEvenSales) %> ₼</td></tr>
+      <tr><td>Gündəlik minimum satış hədəfi</td><td class="text-end"><%= money(dailyTarget) %> ₼</td></tr>
+    </tbody>
+  </table>
+
+  <h5 class="mt-4">Əlavə göstəricilər</h5>
+  <table class="table bg-white" style="max-width: 640px;">
+    <tbody>
+      <tr><td>Orta günlük satış</td><td class="text-end"><%= money(avgDailySale) %> ₼</td></tr>
+      <tr><td>Satış əməliyyatlarının sayı</td><td class="text-end"><%= salesCount %></td></tr>
+      <tr><td>Orta əməliyyat dəyəri</td><td class="text-end"><%= money(avgTransactionValue) %> ₼</td></tr>
+      <tr><td>Inventory Turnover (təxmini)</td><td class="text-end"><%= inventoryTurnover.toFixed(2) %></td></tr>
+    </tbody>
+  </table>
+</div>
+<%- include('../partials/foot') %>

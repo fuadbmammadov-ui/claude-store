@@ -24,9 +24,12 @@
     <p class="text-muted mb-1">Açılış: <%= new Date(openSession.openedAt).toLocaleString('az-AZ') %> — <%= openSession.openedBy.fullName %></p>
     <table class="table">
       <tr><td>Açılış məbləği</td><td class="text-end"><%= money(openSession.openingAmount) %> ₼</td></tr>
-      <tr><td>Nağd satış + borc ödənişi</td><td class="text-end"><%= money(totals.cash) %> ₼</td></tr>
+      <tr><td>Nağd satış + borc ödənişi (giriş)</td><td class="text-end"><%= money(totals.cash) %> ₼</td></tr>
       <tr><td>Kartla satış + borc ödənişi</td><td class="text-end"><%= money(totals.card) %> ₼</td></tr>
+      <tr><td>Köçürmə ilə satış</td><td class="text-end"><%= money(totals.transfer) %> ₼</td></tr>
       <tr><td>Borca yazılan</td><td class="text-end"><%= money(totals.debt) %> ₼</td></tr>
+      <tr><td>Nağd təchizatçı ödənişi (çıxış)</td><td class="text-end text-danger">-<%= money(totals.cashOutSupplier) %> ₼</td></tr>
+      <tr><td>Nağd xərclər (çıxış)</td><td class="text-end text-danger">-<%= money(totals.cashOutExpenses) %> ₼</td></tr>
       <tr class="table-primary fw-bold"><td>Kassada olmalı nağd məbləğ</td><td class="text-end"><%= money(totals.expectedCash) %> ₼</td></tr>
     </table>
     <form method="post" action="/cash-sessions/<%= openSession.id %>/close">

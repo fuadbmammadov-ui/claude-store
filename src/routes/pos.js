@@ -43,14 +43,18 @@ router.get('/customers-search', asyncHandler(async (req, res) => {
   res.json(customers);
 }));
 
+function round2(n) {
+  return Math.round((Number(n) || 0) * 100) / 100;
+}
+
 router.post('/checkout', async (req, res) => {
   try {
-    const { items, paymentType, customerId, customerName, customerPhone } = req.body;
+    const { items, paymentType, customerId, customerName, customerPhone, note } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Səbət boşdur' });
     }
-    if (!['CASH', 'CARD', 'DEBT'].includes(paymentType)) {
+    if (!['CASH', 'CARD', 'TRANSFER', 'DEBT'].includes(paymentType)) {
       return res.status(400).json({ error: 'Ödəniş növü yanlışdır' });
     }
     if (paymentType === 'DEBT' && !customerId && !(customerName && customerName.trim())) {
@@ -79,7 +83,12 @@ router.post('/checkout', async (req, res) => {
           throw new Error(`${product.name}: anbarda kifayət qədər yoxdur (qalıq: ${product.quantity})`);
         }
 
-        const lineTotal = requestedQty * Number(product.salePrice);
+        const unitPrice = item.unitPrice !== undefined && item.unitPrice !== '' && Number(item.unitPrice) >= 0
+          ? round2(item.unitPrice)
+          : round2(product.salePrice);
+        const discount = Math.max(0, round2(item.discount));
+        const rawTotal = requestedQty * unitPrice;
+        const lineTotal = Math.max(0, round2(rawTotal - discount));
         totalAmount += lineTotal;
 
         saleItemsData.push({
@@ -87,7 +96,8 @@ router.post('/checkout', async (req, res) => {
           productName: product.name,
           unit: product.unit,
           quantity: requestedQty,
-          unitPrice: product.salePrice,
+          unitPrice,
+          discount,
           purchasePrice: product.purchasePrice,
           lineTotal,
         });
@@ -98,6 +108,7 @@ router.post('/checkout', async (req, res) => {
         });
       }
 
+      totalAmount = round2(totalAmount);
       const paidAmount = paymentType === 'DEBT' ? 0 : totalAmount;
       const status = paymentType === 'DEBT' ? 'DEBT' : 'PAID';
 
@@ -109,6 +120,7 @@ router.post('/checkout', async (req, res) => {
           totalAmount,
           paidAmount,
           status,
+          note: (note || '').trim() || null,
           items: { create: saleItemsData },
         },
         include: { items: true, customer: true },
