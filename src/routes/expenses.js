@@ -40,7 +40,8 @@ router.get('/', asyncHandler(async (req, res) => {
 }));
 
 router.post('/', asyncHandler(async (req, res) => {
-  const { category, name, amount, method, note } = req.body;
+  const { category, name, amount, method, note, date } = req.body;
+  const createdAt = date ? new Date(`${date}T12:00:00Z`) : undefined;
   await prisma.expense.create({
     data: {
       category: category || 'Digər',
@@ -49,6 +50,7 @@ router.post('/', asyncHandler(async (req, res) => {
       method: ['CASH', 'CARD', 'TRANSFER'].includes(method) ? method : 'CASH',
       note: (note || '').trim() || null,
       createdById: req.session.user.id,
+      ...(createdAt && !Number.isNaN(createdAt.getTime()) ? { createdAt } : {}),
     },
   });
   res.redirect('/expenses');

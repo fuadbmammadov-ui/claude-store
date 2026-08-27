@@ -38,7 +38,7 @@ async function importExpenses(data, admin, warnings) {
   if (existingExpenses > 0 || !data.expenses || !data.expenses.length) return;
 
   const validMethods = ['CASH', 'CARD', 'TRANSFER'];
-  const methodMap = { Nağd: 'CASH', Kart: 'CARD', Köçürmə: 'TRANSFER' };
+  const methodMap = { 'Nağd': 'CASH', 'Kart': 'CARD', 'Köçürmə': 'TRANSFER' };
 
   let count = 0;
   for (const e of data.expenses) {
@@ -106,8 +106,16 @@ async function main() {
 
   if (existingReceipts > 0) {
     console.log('Köhnə mağaza məlumatları artıq import edilib — mal/satış/qəbul idxalı keçirilir, yalnız əlavə məlumatlar tamamlanır.');
-    await backfillProductCategories(data, warnings);
-    await importExpenses(data, admin, warnings);
+    try {
+      await backfillProductCategories(data, warnings);
+    } catch (e) {
+      console.error('backfillProductCategories xətası:', e);
+    }
+    try {
+      await importExpenses(data, admin, warnings);
+    } catch (e) {
+      console.error('importExpenses xətası:', e);
+    }
     return;
   }
 
@@ -284,7 +292,12 @@ async function main() {
     console.log('Artıq mövcud kassa sessiyası var, yeni başlanğıc sessiyası yaradılmadı.');
   }
 
-  await importExpenses(data, admin, warnings);
+  try {
+    await importExpenses(data, admin, warnings);
+  } catch (e) {
+    console.error('importExpenses xətası:', e);
+    warnings.push('Xərclər idxal edilərkən xəta baş verdi — konsol loguna baxın, lazım gələrsə xərcləri əl ilə /expenses səhifəsindən əlavə edin.');
+  }
 
   if (warnings.length) {
     console.log('\n--- DİQQƏT tələb edən qeydlər ---');
