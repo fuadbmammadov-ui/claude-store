@@ -74,6 +74,25 @@ app.use((err, req, res, next) => {
   res.status(500).render('error', { title: 'Xəta', message: err.message || 'Daxili server xətası.' });
 });
 
+function runStartupScript(scriptPath) {
+  const { execSync } = require('child_process');
+  try {
+    execSync(`node ${scriptPath}`, {
+      cwd: path.join(__dirname, '..'),
+      stdio: 'inherit',
+      env: process.env,
+    });
+  } catch (err) {
+    console.error(`${scriptPath} işə salınarkən xəta baş verdi:`, err.message);
+  }
+}
+
+// Render-in build əmri konfiqurasiyası dəyişəndə "yadda saxlana" bilir və render.yaml-dakı
+// yeniləmələri avtomatik götürmür — ona görə seed/idxal skriptlərini burada, server açılan
+// zaman da işə salırıq. Hər ikisi idempotentdir (artıq işlənibsə heç nə etmir).
+runStartupScript('prisma/seed.js');
+runStartupScript('prisma/import-legacy.js');
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Mağaza POS sistemi ${PORT} portunda işləyir.`);
