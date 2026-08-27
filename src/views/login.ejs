@@ -1,0 +1,21 @@
+<%- include('partials/head', { title: 'Giriş' }) %>
+<div class="login-wrapper">
+  <div class="card p-4" style="width: 22rem;">
+    <h4 class="mb-3 text-center">Mağaza POS-a giriş</h4>
+    <% if (error) { %>
+      <div class="alert alert-danger py-2"><%= error %></div>
+    <% } %>
+    <form method="post" action="/login">
+      <div class="mb-3">
+        <label class="form-label">İstifadəçi adı</label>
+        <input type="text" name="username" class="form-control" autofocus required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Şifrə</label>
+        <input type="password" name="password" class="form-control" required>
+      </div>
+      <button type="submit" class="btn btn-primary w-100">Daxil ol</button>
+    </form>
+  </div>
+</div>
+<%- include('partials/foot') %>

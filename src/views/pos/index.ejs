@@ -1,0 +1,70 @@
+<%- include('../partials/head', { title: 'Satış' }) %>
+<%- include('../partials/nav') %>
+<div class="container-fluid py-4">
+  <div class="row">
+    <div class="col-lg-7">
+      <div class="card p-3 mb-3">
+        <label class="form-label">Barkodu skan edin və ya daxil edin</label>
+        <input type="text" id="barcode-input" class="form-control" autofocus placeholder="Barkod...">
+        <div id="scan-error" class="text-danger mt-2"></div>
+      </div>
+      <div class="card p-3">
+        <label class="form-label">Və ya ad üzrə axtar</label>
+        <input type="text" id="name-search" class="form-control" placeholder="Mal adı...">
+        <div id="search-results" class="list-group mt-2"></div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card p-3">
+        <h5>Səbət</h5>
+        <table class="table">
+          <thead><tr><th>Mal</th><th>Miqdar</th><th>Qiymət</th><th>Cəm</th><th></th></tr></thead>
+          <tbody id="cart-body"></tbody>
+        </table>
+        <h4 class="text-end">Yekun: <span id="cart-total">0.00</span> ₼</h4>
+        <div class="d-grid gap-2">
+          <button class="btn btn-success" onclick="openPayModal('CASH')">Nağd ödə</button>
+          <button class="btn btn-primary" onclick="openPayModal('CARD')">Kartla ödə</button>
+          <button class="btn btn-warning" onclick="openPayModal('DEBT')">Borca yaz</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Odeme modal -->
+<div class="modal" id="pay-modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="pay-modal-title">Ödəniş</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>Yekun məbləğ: <strong id="pay-modal-total"></strong> ₼</p>
+        <div id="customer-section" style="display:none;">
+          <label class="form-label">Müştəri (ad ilə axtar və ya yeni yaradın)</label>
+          <input type="text" id="customer-search" class="form-control mb-1" placeholder="Müştəri adı və ya nömrə">
+          <div id="customer-results" class="list-group mb-2"></div>
+          <div id="selected-customer" class="alert alert-info py-1" style="display:none;"></div>
+          <div id="new-customer-fields">
+            <input type="hidden" id="selected-customer-id">
+            <label class="form-label">Yeni müştəri adı</label>
+            <input type="text" id="new-customer-name" class="form-control mb-2">
+            <label class="form-label">Telefon (könüllü)</label>
+            <input type="text" id="new-customer-phone" class="form-control">
+          </div>
+        </div>
+        <div id="pay-error" class="text-danger mt-2"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-bs-dismiss="modal">İmtina</button>
+        <button class="btn btn-primary" onclick="submitCheckout()">Təsdiqlə</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/pos.js"></script>
+<%- include('../partials/foot') %>

@@ -1,0 +1,65 @@
+<%- include('../partials/head', { title: 'Barkod çapı — ' + product.name }) %>
+<%- include('../partials/nav') %>
+<style>
+  @page { size: 50mm 30mm; margin: 2mm; }
+  .label-box {
+    width: 46mm;
+    text-align: center;
+    font-family: Arial, sans-serif;
+  }
+  .label-box .p-name { font-size: 9px; font-weight: bold; line-height: 1.1; margin-bottom: 1mm; }
+  .label-box .p-price { font-size: 11px; font-weight: bold; margin-top: 1mm; }
+  @media print {
+    .label-box { margin: 0; }
+  }
+</style>
+<div class="container py-4 no-print">
+  <h3>Barkod etiketi: <%= product.name %></h3>
+  <p class="text-muted">Çap düyməsinə bassanız yalnız etiket çap olunacaq (50mm x 30mm ölçülü, kiçik etiket printerləri üçün).</p>
+  <label class="form-label">Neçə nüsxə?</label>
+  <input type="number" id="copies" value="1" min="1" max="50" class="form-control mb-3" style="max-width: 120px;">
+  <button class="btn btn-primary" onclick="doPrint()">Çap et</button>
+  <a href="/products/<%= product.id %>" class="btn btn-outline-secondary">Geri</a>
+
+  <div class="mt-4 p-3 border d-inline-block bg-white">
+    <div class="label-box mx-auto">
+      <div class="p-name"><%= product.name %></div>
+      <svg id="barcode-preview"></svg>
+      <div class="p-price"><%= money(product.salePrice) %> ₼<% if (product.unit === 'KG') { %> / kq<% } %></div>
+    </div>
+  </div>
+</div>
+
+<div id="print-area" style="display:none;"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script>
+  const productName = <%- JSON.stringify(product.name) %>;
+  const priceText = <%- JSON.stringify(money(product.salePrice) + ' ₼' + (product.unit === 'KG' ? ' / kq' : '')) %>;
+  const barcodeValue = <%- JSON.stringify(product.barcode) %>;
+
+  JsBarcode('#barcode-preview', barcodeValue, { format: 'CODE128', height: 35, width: 1.4, fontSize: 10, margin: 2 });
+
+  function doPrint() {
+    const copies = parseInt(document.getElementById('copies').value, 10) || 1;
+    const area = document.getElementById('print-area');
+    area.innerHTML = '';
+    for (let i = 0; i < copies; i++) {
+      const box = document.createElement('div');
+      box.className = 'label-box label-print-item';
+      box.innerHTML = '<div class="p-name">' + productName + '</div>' +
+        '<svg class="barcode-svg"></svg>' +
+        '<div class="p-price">' + priceText + '</div>';
+      area.appendChild(box);
+    }
+    area.querySelectorAll('.barcode-svg').forEach((svg) => {
+      JsBarcode(svg, barcodeValue, { format: 'CODE128', height: 35, width: 1.4, fontSize: 10, margin: 2 });
+    });
+    area.classList.add('label-print-page');
+    area.style.display = 'block';
+    window.print();
+    area.style.display = 'none';
+    area.classList.remove('label-print-page');
+  }
+</script>
+<%- include('../partials/foot') %>

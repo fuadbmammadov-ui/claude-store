@@ -1,0 +1,68 @@
+<%- include('../partials/head', { title: 'Kassa' }) %>
+<%- include('../partials/nav') %>
+<div class="container py-4">
+  <h3>Kassa</h3>
+
+  <% if (!openSession) { %>
+  <div class="card p-4" style="max-width: 420px;">
+    <h5>Kassanı aç</h5>
+    <form method="post" action="/cash-sessions/open">
+      <div class="mb-3">
+        <label class="form-label">Açılış məbləği (₼)</label>
+        <input type="number" step="0.01" min="0" name="openingAmount" class="form-control" required autofocus>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Qeyd (könüllü)</label>
+        <input type="text" name="note" class="form-control">
+      </div>
+      <button type="submit" class="btn btn-success">Kassanı aç</button>
+    </form>
+  </div>
+  <% } else { %>
+  <div class="card p-4 mb-4" style="max-width: 520px;">
+    <h5>Açıq kassa</h5>
+    <p class="text-muted mb-1">Açılış: <%= new Date(openSession.openedAt).toLocaleString('az-AZ') %> — <%= openSession.openedBy.fullName %></p>
+    <table class="table">
+      <tr><td>Açılış məbləği</td><td class="text-end"><%= money(openSession.openingAmount) %> ₼</td></tr>
+      <tr><td>Nağd satış + borc ödənişi</td><td class="text-end"><%= money(totals.cash) %> ₼</td></tr>
+      <tr><td>Kartla satış + borc ödənişi</td><td class="text-end"><%= money(totals.card) %> ₼</td></tr>
+      <tr><td>Borca yazılan</td><td class="text-end"><%= money(totals.debt) %> ₼</td></tr>
+      <tr class="table-primary fw-bold"><td>Kassada olmalı nağd məbləğ</td><td class="text-end"><%= money(totals.expectedCash) %> ₼</td></tr>
+    </table>
+    <form method="post" action="/cash-sessions/<%= openSession.id %>/close">
+      <div class="mb-3">
+        <label class="form-label">Kassada faktiki sayılan məbləğ (₼)</label>
+        <input type="number" step="0.01" min="0" name="closingAmountActual" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Qeyd (könüllü)</label>
+        <input type="text" name="note" class="form-control">
+      </div>
+      <button type="submit" class="btn btn-danger">Kassanı bağla</button>
+    </form>
+  </div>
+  <% } %>
+
+  <h5 class="mt-4">Tarixçə</h5>
+  <table class="table bg-white">
+    <thead><tr><th>Açılış</th><th>Bağlanış</th><th>Olmalı</th><th>Faktiki</th><th>Fərq</th></tr></thead>
+    <tbody>
+      <% historyWithTotals.forEach(h => { %>
+      <% const diff = Number(h.session.closingAmountActual) - h.totals.expectedCash; %>
+      <tr>
+        <td><%= new Date(h.session.openedAt).toLocaleString('az-AZ') %></td>
+        <td><%= new Date(h.session.closedAt).toLocaleString('az-AZ') %></td>
+        <td><%= money(h.totals.expectedCash) %> ₼</td>
+        <td><%= money(h.session.closingAmountActual) %> ₼</td>
+        <td class="<%= diff === 0 ? '' : (diff > 0 ? 'text-success' : 'text-danger') %>">
+          <%= diff > 0 ? '+' : '' %><%= money(diff) %> ₼
+        </td>
+      </tr>
+      <% }) %>
+      <% if (!historyWithTotals.length) { %>
+      <tr><td colspan="5" class="text-center text-muted">Qeyd yoxdur</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>
+<%- include('../partials/foot') %>

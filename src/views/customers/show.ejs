@@ -1,0 +1,61 @@
+<%- include('../partials/head', { title: customer.name }) %>
+<%- include('../partials/nav') %>
+<div class="container py-4">
+  <h3><%= customer.name %></h3>
+  <p class="text-muted"><%= customer.phone || 'Telefon qeyd olunmayıb' %></p>
+  <p>Hazırkı borc:
+    <span class="badge <%= outstanding > 0 ? 'bg-danger' : 'bg-success' %>"><%= money(outstanding) %> ₼</span>
+  </p>
+
+  <% if (outstanding > 0) { %>
+  <form method="post" action="/customers/<%= customer.id %>/payments" class="card p-3 mb-4" style="max-width: 420px;">
+    <h6>Borc ödənişi qeydə al</h6>
+    <div class="mb-2">
+      <label class="form-label">Məbləğ (₼)</label>
+      <input type="number" step="0.01" min="0.01" max="<%= outstanding %>" name="amount" class="form-control" required>
+    </div>
+    <div class="mb-2">
+      <label class="form-label">Ödəniş növü</label>
+      <select name="method" class="form-select">
+        <option value="CASH">Nağd</option>
+        <option value="CARD">Kart</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-success">Ödənişi qeydə al</button>
+  </form>
+  <% } %>
+
+  <h5>Satış tarixçəsi</h5>
+  <table class="table bg-white">
+    <thead><tr><th>Tarix</th><th>Cəm</th><th>Ödənilib</th><th>Status</th></tr></thead>
+    <tbody>
+      <% customer.sales.forEach(s => { %>
+      <tr>
+        <td><a href="/pos/receipt/<%= s.id %>" target="_blank"><%= new Date(s.createdAt).toLocaleString('az-AZ') %></a></td>
+        <td><%= money(s.totalAmount) %> ₼</td>
+        <td><%= money(s.paidAmount) %> ₼</td>
+        <td><%= s.status === 'PAID' ? 'Ödənilib' : 'Borc' %></td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+
+  <h5>Ödəniş tarixçəsi</h5>
+  <table class="table bg-white">
+    <thead><tr><th>Tarix</th><th>Məbləğ</th><th>Növ</th><th>Qəbul edən</th></tr></thead>
+    <tbody>
+      <% customer.debtPayments.forEach(p => { %>
+      <tr>
+        <td><%= new Date(p.paidAt).toLocaleString('az-AZ') %></td>
+        <td><%= money(p.amount) %> ₼</td>
+        <td><%= p.method === 'CASH' ? 'Nağd' : 'Kart' %></td>
+        <td><%= p.receivedBy.fullName %></td>
+      </tr>
+      <% }) %>
+      <% if (!customer.debtPayments.length) { %>
+      <tr><td colspan="4" class="text-center text-muted">Qeyd yoxdur</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>
+<%- include('../partials/foot') %>

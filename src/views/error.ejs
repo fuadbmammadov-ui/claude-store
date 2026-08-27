@@ -1,0 +1,8 @@
+<%- include('partials/head', { title: title || 'Xəta' }) %>
+<% if (typeof currentUser !== 'undefined' && currentUser) { %><%- include('partials/nav') %><% } %>
+<div class="container py-5 text-center">
+  <h2><%= title || 'Xəta' %></h2>
+  <p class="text-muted"><%= message %></p>
+  <a href="/" class="btn btn-primary">Panelə qayıt</a>
+</div>
+<%- include('partials/foot') %>

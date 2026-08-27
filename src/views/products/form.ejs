@@ -1,0 +1,50 @@
+<%- include('../partials/head', { title: product ? 'Malı redaktə et' : 'Yeni mal' }) %>
+<%- include('../partials/nav') %>
+<div class="container py-4" style="max-width: 640px;">
+  <h3><%= product ? 'Malı redaktə et' : 'Yeni mal / İlkin mal qəbulu' %></h3>
+  <form method="post" action="<%= product ? '/products/' + product.id + '?_method=PUT' : '/products' %>" class="card p-4 mt-3">
+    <div class="mb-3">
+      <label class="form-label">Adı</label>
+      <input type="text" name="name" class="form-control" value="<%= product ? product.name : '' %>" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Barkod <span class="text-muted">(boş saxlasanız avtomatik yaradılır)</span></label>
+      <input type="text" name="barcode" class="form-control" value="<%= product ? product.barcode : '' %>" <%= product ? 'required' : '' %>>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Ölçü vahidi</label>
+      <select name="unit" class="form-select">
+        <option value="PIECE" <%= product && product.unit === 'PIECE' ? 'selected' : '' %>>Ədəd</option>
+        <option value="KG" <%= product && product.unit === 'KG' ? 'selected' : '' %>>Çəki ilə (kq)</option>
+      </select>
+    </div>
+    <div class="row">
+      <div class="col mb-3">
+        <label class="form-label">Alış qiyməti (₼)</label>
+        <input type="number" step="0.01" min="0" name="purchasePrice" class="form-control" value="<%= product ? product.purchasePrice : '' %>" required>
+      </div>
+      <div class="col mb-3">
+        <label class="form-label">Satış qiyməti (₼)</label>
+        <input type="number" step="0.01" min="0" name="salePrice" class="form-control" value="<%= product ? product.salePrice : '' %>" required>
+      </div>
+    </div>
+    <% if (!product) { %>
+    <div class="row">
+      <div class="col mb-3">
+        <label class="form-label">İlkin miqdar</label>
+        <input type="number" step="0.001" min="0" name="quantity" class="form-control" value="0">
+      </div>
+      <div class="col mb-3">
+        <label class="form-label">Təchizatçı (könüllü)</label>
+        <input type="text" name="supplierName" class="form-control">
+      </div>
+    </div>
+    <% } %>
+    <div class="mb-3">
+      <label class="form-label">Minimum qalıq xəbərdarlığı (könüllü)</label>
+      <input type="number" step="0.001" min="0" name="minStock" class="form-control" value="<%= product && product.minStock ? product.minStock : '' %>">
+    </div>
+    <button type="submit" class="btn btn-primary">Yadda saxla</button>
+  </form>
+</div>
+<%- include('../partials/foot') %>

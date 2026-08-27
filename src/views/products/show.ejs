@@ -1,0 +1,42 @@
+<%- include('../partials/head', { title: product.name }) %>
+<%- include('../partials/nav') %>
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-start">
+    <div>
+      <h3><%= product.name %></h3>
+      <p class="text-muted mb-1">Barkod: <code><%= product.barcode %></code></p>
+      <p>Qalıq: <strong><%= qty(product.quantity, product.unit) %> <%= product.unit === 'KG' ? 'kq' : 'ədəd' %></strong></p>
+      <p>Alış: <%= money(product.purchasePrice) %> ₼ &nbsp;|&nbsp; Satış: <%= money(product.salePrice) %> ₼</p>
+    </div>
+    <div class="text-end">
+      <a href="/products/<%= product.id %>/receive" class="btn btn-success">Mal qəbulu</a>
+      <a href="/products/<%= product.id %>/label" class="btn btn-outline-secondary">Barkod çap</a>
+      <% if (currentUser.role === 'ADMIN') { %>
+      <a href="/products/<%= product.id %>/edit" class="btn btn-outline-primary">Redaktə</a>
+      <form action="/products/<%= product.id %>?_method=DELETE" method="post" class="d-inline" onsubmit="return confirm('Bu mal siyahıdan silinsin?');">
+        <button class="btn btn-outline-danger">Sil</button>
+      </form>
+      <% } %>
+    </div>
+  </div>
+
+  <h5 class="mt-4">Son mal qəbulları</h5>
+  <table class="table bg-white">
+    <thead><tr><th>Tarix</th><th>Miqdar</th><th>Alış qiyməti</th><th>Təchizatçı</th><th>Qəbul edən</th></tr></thead>
+    <tbody>
+      <% product.stockReceipts.forEach(r => { %>
+      <tr>
+        <td><%= new Date(r.createdAt).toLocaleString('az-AZ') %></td>
+        <td><%= qty(r.quantity, product.unit) %></td>
+        <td><%= money(r.purchasePrice) %> ₼</td>
+        <td><%= r.supplierName || '-' %></td>
+        <td><%= r.receivedBy.fullName %></td>
+      </tr>
+      <% }) %>
+      <% if (!product.stockReceipts.length) { %>
+      <tr><td colspan="5" class="text-center text-muted">Qeyd yoxdur</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>
+<%- include('../partials/foot') %>

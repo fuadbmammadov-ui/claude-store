@@ -1,0 +1,29 @@
+<%- include('../partials/head', { title: 'Yeni istifadəçi' }) %>
+<%- include('../partials/nav') %>
+<div class="container py-4" style="max-width: 480px;">
+  <h3>Yeni istifadəçi</h3>
+  <% if (error) { %><div class="alert alert-danger"><%= error %></div><% } %>
+  <form method="post" action="/users" class="card p-4">
+    <div class="mb-3">
+      <label class="form-label">Tam adı</label>
+      <input type="text" name="fullName" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">İstifadəçi adı</label>
+      <input type="text" name="username" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Şifrə</label>
+      <input type="password" name="password" class="form-control" required minlength="4">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Rol</label>
+      <select name="role" class="form-select">
+        <option value="CASHIER">Satıcı (mal qəbulu + satış)</option>
+        <option value="ADMIN">Admin (tam səlahiyyət)</option>
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Yarat</button>
+  </form>
+</div>
+<%- include('../partials/foot') %>

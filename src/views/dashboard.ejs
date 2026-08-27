@@ -1,0 +1,61 @@
+<%- include('partials/head', { title: 'Panel' }) %>
+<%- include('partials/nav') %>
+<div class="container py-4">
+  <h3>Bugünkü vəziyyət</h3>
+
+  <% if (!openSession) { %>
+  <div class="alert alert-warning">Kassa açıq deyil. <a href="/cash-sessions">Kassanı açın</a>.</div>
+  <% } %>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card p-3 text-center">
+        <div class="text-muted">Nağd satış</div>
+        <div class="fs-4 fw-bold"><%= money(cashTotal) %> ₼</div>
+        <div class="text-muted small"><%= cashCount %> satış</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3 text-center">
+        <div class="text-muted">Kartla satış</div>
+        <div class="fs-4 fw-bold"><%= money(cardTotal) %> ₼</div>
+        <div class="text-muted small"><%= cardCount %> satış</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3 text-center">
+        <div class="text-muted">Borca yazılan</div>
+        <div class="fs-4 fw-bold text-danger"><%= money(debtTotal) %> ₼</div>
+        <div class="text-muted small"><%= debtCount %> satış</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3 text-center">
+        <div class="text-muted">Günlük qazanc (marja)</div>
+        <div class="fs-4 fw-bold text-success"><%= money(profitToday) %> ₼</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mb-4">
+    <a href="/pos" class="btn btn-primary btn-lg">Satışa başla</a>
+    <a href="/products/new" class="btn btn-outline-secondary btn-lg">Mal qəbulu</a>
+  </div>
+
+  <% if (lowStockList.length) { %>
+  <h5>Azalan mallar</h5>
+  <table class="table bg-white">
+    <thead><tr><th>Mal</th><th>Qalıq</th><th>Minimum</th></tr></thead>
+    <tbody>
+      <% lowStockList.forEach(p => { %>
+      <tr>
+        <td><a href="/products/<%= p.id %>"><%= p.name %></a></td>
+        <td><%= qty(p.quantity, p.unit) %></td>
+        <td><%= qty(p.minStock, p.unit) %></td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  <% } %>
+</div>
+<%- include('partials/foot') %>

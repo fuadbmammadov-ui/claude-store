@@ -1,0 +1,56 @@
+<%- include('../partials/head', { title: 'Günlük hesabat' }) %>
+<%- include('../partials/nav') %>
+<div class="container-fluid py-4">
+  <h3>Günlük hesabat</h3>
+  <form method="get" class="mb-4" style="max-width: 250px;">
+    <input type="date" name="date" value="<%= day %>" class="form-control" onchange="this.form.submit()">
+  </form>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Nağd</div><div class="fw-bold"><%= money(totals.cash) %> ₼</div></div></div>
+    <div class="col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Kart</div><div class="fw-bold"><%= money(totals.card) %> ₼</div></div></div>
+    <div class="col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Borc</div><div class="fw-bold text-danger"><%= money(totals.debt) %> ₼</div></div></div>
+    <div class="col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Ümumi satış</div><div class="fw-bold"><%= money(totals.revenue) %> ₼</div></div></div>
+    <div class="col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Mal alışı (bugün)</div><div class="fw-bold"><%= money(totalPurchases) %> ₼</div></div></div>
+    <div class="col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Qazanc (marja)</div><div class="fw-bold text-success"><%= money(totals.profit) %> ₼</div></div></div>
+  </div>
+
+  <h5>Satışlar</h5>
+  <table class="table table-sm bg-white">
+    <thead><tr><th>Vaxt</th><th>Satıcı</th><th>Müştəri</th><th>Növ</th><th>Məbləğ</th></tr></thead>
+    <tbody>
+      <% sales.forEach(s => { %>
+      <tr>
+        <td><%= new Date(s.createdAt).toLocaleTimeString('az-AZ') %></td>
+        <td><%= s.cashier.fullName %></td>
+        <td><%= s.customer ? s.customer.name : '-' %></td>
+        <td><%= s.paymentType === 'CASH' ? 'Nağd' : s.paymentType === 'CARD' ? 'Kart' : 'Borc' %></td>
+        <td><%= money(s.totalAmount) %> ₼</td>
+      </tr>
+      <% }) %>
+      <% if (!sales.length) { %>
+      <tr><td colspan="5" class="text-center text-muted">Bu tarixdə satış yoxdur</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+
+  <h5 class="mt-4">Mal qəbulları</h5>
+  <table class="table table-sm bg-white">
+    <thead><tr><th>Vaxt</th><th>Mal</th><th>Miqdar</th><th>Alış qiyməti</th><th>Qəbul edən</th></tr></thead>
+    <tbody>
+      <% receiptsToday.forEach(r => { %>
+      <tr>
+        <td><%= new Date(r.createdAt).toLocaleTimeString('az-AZ') %></td>
+        <td><%= r.product.name %></td>
+        <td><%= qty(r.quantity, r.product.unit) %></td>
+        <td><%= money(r.purchasePrice) %> ₼</td>
+        <td><%= r.receivedBy.fullName %></td>
+      </tr>
+      <% }) %>
+      <% if (!receiptsToday.length) { %>
+      <tr><td colspan="5" class="text-center text-muted">Bu tarixdə mal qəbulu yoxdur</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>
+<%- include('../partials/foot') %>

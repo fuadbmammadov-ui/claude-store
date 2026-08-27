@@ -1,0 +1,48 @@
+<%- include('../partials/head', { title: 'Mallar' }) %>
+<%- include('../partials/nav') %>
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Mallar</h3>
+    <a href="/products/new" class="btn btn-primary">+ Yeni mal / Mal qəbulu</a>
+  </div>
+
+  <form class="mb-3" method="get" action="/products">
+    <input type="text" name="q" value="<%= q %>" class="form-control" placeholder="Ad və ya barkod üzrə axtar...">
+  </form>
+
+  <div class="table-responsive">
+    <table class="table table-hover bg-white">
+      <thead>
+        <tr>
+          <th>Ad</th>
+          <th>Barkod</th>
+          <th>Ölçü</th>
+          <th>Alış qiyməti</th>
+          <th>Satış qiyməti</th>
+          <th>Qalıq</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% products.forEach(p => { %>
+        <tr class="<%= p.minStock && Number(p.quantity) <= Number(p.minStock) ? 'table-warning' : '' %>">
+          <td><a href="/products/<%= p.id %>"><%= p.name %></a></td>
+          <td><code><%= p.barcode %></code></td>
+          <td><%= p.unit === 'KG' ? 'kq' : 'ədəd' %></td>
+          <td><%= money(p.purchasePrice) %> ₼</td>
+          <td><%= money(p.salePrice) %> ₼</td>
+          <td><%= qty(p.quantity, p.unit) %> <%= p.unit === 'KG' ? 'kq' : 'ədəd' %></td>
+          <td class="text-end">
+            <a href="/products/<%= p.id %>/receive" class="btn btn-sm btn-outline-success">Mal qəbulu</a>
+            <a href="/products/<%= p.id %>/label" class="btn btn-sm btn-outline-secondary">Barkod çap</a>
+          </td>
+        </tr>
+        <% }) %>
+        <% if (!products.length) { %>
+        <tr><td colspan="7" class="text-center text-muted py-4">Mal tapılmadı</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<%- include('../partials/foot') %>

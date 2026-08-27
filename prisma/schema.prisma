@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  CASHIER
+}
+
+enum Unit {
+  PIECE
+  KG
+}
+
+enum PaymentType {
+  CASH
+  CARD
+  DEBT
+}
+
+enum SaleStatus {
+  PAID
+  DEBT
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  username      String         @unique
+  passwordHash  String
+  fullName      String
+  role          Role           @default(CASHIER)
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  sales         Sale[]
+  stockReceipts StockReceipt[]
+  cashSessions  CashSession[]
+  debtPayments  DebtPayment[]
+}
+
+model Product {
+  id            Int            @id @default(autoincrement())
+  name          String
+  barcode       String         @unique
+  unit          Unit           @default(PIECE)
+  purchasePrice Decimal        @db.Decimal(12, 2)
+  salePrice     Decimal        @db.Decimal(12, 2)
+  quantity      Decimal        @db.Decimal(12, 3)
+  minStock      Decimal?       @db.Decimal(12, 3)
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  saleItems     SaleItem[]
+  stockReceipts StockReceipt[]
+}
+
+model StockReceipt {
+  id            Int      @id @default(autoincrement())
+  product       Product  @relation(fields: [productId], references: [id])
+  productId     Int
+  quantity      Decimal  @db.Decimal(12, 3)
+  purchasePrice Decimal  @db.Decimal(12, 2)
+  supplierName  String?
+  receivedBy    User     @relation(fields: [receivedById], references: [id])
+  receivedById  Int
+  createdAt     DateTime @default(now())
+}
+
+model Customer {
+  id           Int           @id @default(autoincrement())
+  name         String
+  phone        String?
+  note         String?
+  createdAt    DateTime      @default(now())
+  sales        Sale[]
+  debtPayments DebtPayment[]
+}
+
+model Sale {
+  id           Int           @id @default(autoincrement())
+  customer     Customer?     @relation(fields: [customerId], references: [id])
+  customerId   Int?
+  cashier      User          @relation(fields: [cashierId], references: [id])
+  cashierId    Int
+  paymentType  PaymentType
+  totalAmount  Decimal       @db.Decimal(12, 2)
+  paidAmount   Decimal       @db.Decimal(12, 2)
+  status       SaleStatus
+  createdAt    DateTime      @default(now())
+  items        SaleItem[]
+  debtPayments DebtPayment[]
+}
+
+model SaleItem {
+  id            Int     @id @default(autoincrement())
+  sale          Sale    @relation(fields: [saleId], references: [id])
+  saleId        Int
+  product       Product @relation(fields: [productId], references: [id])
+  productId     Int
+  productName   String
+  unit          Unit
+  quantity      Decimal @db.Decimal(12, 3)
+  unitPrice     Decimal @db.Decimal(12, 2)
+  purchasePrice Decimal @db.Decimal(12, 2)
+  lineTotal     Decimal @db.Decimal(12, 2)
+}
+
+model DebtPayment {
+  id           Int         @id @default(autoincrement())
+  sale         Sale        @relation(fields: [saleId], references: [id])
+  saleId       Int
+  customer     Customer    @relation(fields: [customerId], references: [id])
+  customerId   Int
+  amount       Decimal     @db.Decimal(12, 2)
+  method       PaymentType
+  receivedBy   User        @relation(fields: [receivedById], references: [id])
+  receivedById Int
+  paidAt       DateTime    @default(now())
+}
+
+model CashSession {
+  id                  Int       @id @default(autoincrement())
+  openedBy            User      @relation(fields: [openedById], references: [id])
+  openedById          Int
+  openingAmount       Decimal   @db.Decimal(12, 2)
+  openedAt            DateTime  @default(now())
+  closedAt            DateTime?
+  closingAmountActual Decimal?  @db.Decimal(12, 2)
+  note                String?
+}

@@ -1,0 +1,38 @@
+<%- include('../partials/head', { title: 'Qəbz #' + sale.id }) %>
+<div class="container py-4 no-print" style="max-width: 420px;">
+  <div class="text-end mb-2">
+    <button class="btn btn-primary btn-sm" onclick="window.print()">Çap et</button>
+  </div>
+</div>
+<div class="container" style="max-width: 380px; font-family: monospace;">
+  <h5 class="text-center">Mağaza POS</h5>
+  <p class="text-center mb-1">Qəbz №<%= sale.id %></p>
+  <p class="text-center text-muted">
+    <%= new Date(sale.createdAt).toLocaleString('az-AZ') %><br>
+    Satıcı: <%= sale.cashier.fullName %>
+    <% if (sale.customer) { %><br>Müştəri: <%= sale.customer.name %><% } %>
+  </p>
+  <hr>
+  <table class="table table-sm">
+    <% sale.items.forEach(it => { %>
+    <tr>
+      <td colspan="3"><%= it.productName %></td>
+    </tr>
+    <tr>
+      <td><%= qty(it.quantity, it.unit) %> x <%= money(it.unitPrice) %></td>
+      <td class="text-end"><%= money(it.lineTotal) %> ₼</td>
+    </tr>
+    <% }) %>
+  </table>
+  <hr>
+  <p class="text-end fw-bold">Yekun: <%= money(sale.totalAmount) %> ₼</p>
+  <p class="text-end">
+    Ödəniş növü:
+    <%= sale.paymentType === 'CASH' ? 'Nağd' : sale.paymentType === 'CARD' ? 'Kart' : 'Borc' %>
+  </p>
+  <% if (sale.status === 'DEBT') { %>
+  <p class="text-center text-danger">BORC YAZILIB</p>
+  <% } %>
+  <p class="text-center mt-4">Təşəkkür edirik!</p>
+</div>
+<%- include('../partials/foot') %>
