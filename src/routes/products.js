@@ -119,7 +119,7 @@ router.get('/:id/edit', requireRole('ADMIN'), asyncHandler(async (req, res) => {
 
 router.put('/:id', requireRole('ADMIN'), asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
-  const { name, barcode, category, subCategory, unit, purchasePrice, salePrice, minStock } = req.body;
+  const { name, barcode, category, subCategory, unit, purchasePrice, salePrice, quantity, minStock } = req.body;
   await prisma.product.update({
     where: { id },
     data: {
@@ -130,6 +130,7 @@ router.put('/:id', requireRole('ADMIN'), asyncHandler(async (req, res) => {
       unit: unit === 'KG' ? 'KG' : 'PIECE',
       purchasePrice: purchasePrice || 0,
       salePrice: salePrice || 0,
+      quantity: quantity === '' || quantity === undefined ? undefined : quantity,
       minStock: minStock ? minStock : null,
     },
   });
