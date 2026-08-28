@@ -254,7 +254,7 @@ const scanVideo = document.getElementById('scan-video');
 const scanModalStatus = document.getElementById('scan-modal-status');
 const scanModalLast = document.getElementById('scan-modal-last');
 
-let scanModal;
+let scanModal = null;
 let scanStream = null;
 let scanRafId = null;
 let barcodeDetector = null;
@@ -262,13 +262,14 @@ let lastScannedCode = null;
 let lastScannedAt = 0;
 
 if (cameraScanBtn && scanModalEl) {
-  scanModal = new bootstrap.Modal(scanModalEl);
-
   cameraScanBtn.addEventListener('click', startCameraScan);
   scanModalEl.addEventListener('hidden.bs.modal', stopCameraScan);
 }
 
 async function startCameraScan() {
+  if (!scanModal) {
+    scanModal = new bootstrap.Modal(scanModalEl);
+  }
   scanModalLast.style.display = 'none';
   scanModalLast.textContent = '';
   lastScannedCode = null;
