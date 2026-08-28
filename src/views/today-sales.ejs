@@ -1,0 +1,64 @@
+<%- include('partials/head', { title: 'Bugünkü satışlar' }) %>
+<%- include('partials/nav') %>
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>
+      Bugünkü satışlar
+      <% if (type) { %>
+      <span class="text-muted fs-6">
+        (<%= type === 'CASH' ? 'Nağd' : type === 'CARD' ? 'Kart' : type === 'TRANSFER' ? 'Köçürmə' : 'Borc' %>)
+      </span>
+      <% } %>
+    </h3>
+    <a href="/" class="btn btn-outline-secondary btn-sm">← Panelə qayıt</a>
+  </div>
+
+  <div class="btn-group mb-3">
+    <a href="/today-sales" class="btn btn-sm <%= !type ? 'btn-primary' : 'btn-outline-primary' %>">Hamısı</a>
+    <a href="/today-sales?type=CASH" class="btn btn-sm <%= type === 'CASH' ? 'btn-primary' : 'btn-outline-primary' %>">Nağd</a>
+    <a href="/today-sales?type=CARD" class="btn btn-sm <%= type === 'CARD' ? 'btn-primary' : 'btn-outline-primary' %>">Kart</a>
+    <a href="/today-sales?type=TRANSFER" class="btn btn-sm <%= type === 'TRANSFER' ? 'btn-primary' : 'btn-outline-primary' %>">Köçürmə</a>
+    <a href="/today-sales?type=DEBT" class="btn btn-sm <%= type === 'DEBT' ? 'btn-primary' : 'btn-outline-primary' %>">Borc</a>
+  </div>
+
+  <div class="mb-3 fw-bold">Cəmi: <%= money(total) %> ₼ (<%= sales.length %> çek)</div>
+
+  <div class="accordion" id="sales-accordion">
+    <% sales.forEach((s) => { %>
+    <div class="accordion-item">
+      <h2 class="accordion-header">
+        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sale-<%= s.id %>">
+          <span class="me-3 text-muted">#<%= s.id %></span>
+          <span class="me-3"><%= new Date(s.createdAt).toLocaleTimeString('az-AZ') %></span>
+          <span class="me-3"><%= s.cashier.fullName %></span>
+          <% if (s.customer) { %><span class="me-3 text-muted"><%= s.customer.name %></span><% } %>
+          <span class="ms-auto fw-bold me-3"><%= money(s.totalAmount) %> ₼</span>
+        </button>
+      </h2>
+      <div id="sale-<%= s.id %>" class="accordion-collapse collapse" data-bs-parent="#sales-accordion">
+        <div class="accordion-body">
+          <table class="table table-sm mb-2">
+            <thead><tr><th>Mal</th><th>Miqdar</th><th>Qiymət</th><th>Endirim</th><th>Cəmi</th></tr></thead>
+            <tbody>
+              <% s.items.forEach((it) => { %>
+              <tr>
+                <td><%= it.productName %></td>
+                <td><%= qty(it.quantity, it.unit) %></td>
+                <td><%= money(it.unitPrice) %> ₼</td>
+                <td><%= Number(it.discount) > 0 ? money(it.discount) + ' ₼' : '-' %></td>
+                <td><%= money(it.lineTotal) %> ₼</td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+          <a href="/pos/receipt/<%= s.id %>" target="_blank" class="btn btn-sm btn-outline-secondary">Qəbzi çap et</a>
+        </div>
+      </div>
+    </div>
+    <% }) %>
+    <% if (!sales.length) { %>
+    <div class="text-center text-muted py-4">Bu meyara uyğun satış yoxdur</div>
+    <% } %>
+  </div>
+</div>
+<%- include('partials/foot') %>

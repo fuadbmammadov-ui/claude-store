@@ -9,32 +9,32 @@
 
   <div class="row g-3 mb-4">
     <div class="col-md-2">
-      <div class="card p-3 text-center">
+      <a href="/today-sales?type=CASH" class="card p-3 text-center text-decoration-none text-reset h-100">
         <div class="text-muted small">Nağd satış</div>
         <div class="fs-5 fw-bold"><%= money(cashTotal) %> ₼</div>
         <div class="text-muted small"><%= cashCount %> satış</div>
-      </div>
+      </a>
     </div>
     <div class="col-md-2">
-      <div class="card p-3 text-center">
+      <a href="/today-sales?type=CARD" class="card p-3 text-center text-decoration-none text-reset h-100">
         <div class="text-muted small">Kartla satış</div>
         <div class="fs-5 fw-bold"><%= money(cardTotal) %> ₼</div>
         <div class="text-muted small"><%= cardCount %> satış</div>
-      </div>
+      </a>
     </div>
     <div class="col-md-2">
-      <div class="card p-3 text-center">
+      <a href="/today-sales?type=TRANSFER" class="card p-3 text-center text-decoration-none text-reset h-100">
         <div class="text-muted small">Köçürmə</div>
         <div class="fs-5 fw-bold"><%= money(transferTotal) %> ₼</div>
         <div class="text-muted small"><%= transferCount %> satış</div>
-      </div>
+      </a>
     </div>
     <div class="col-md-2">
-      <div class="card p-3 text-center">
+      <a href="/today-sales?type=DEBT" class="card p-3 text-center text-decoration-none text-reset h-100">
         <div class="text-muted small">Borca yazılan</div>
         <div class="fs-5 fw-bold text-danger"><%= money(debtTotal) %> ₼</div>
         <div class="text-muted small"><%= debtCount %> satış</div>
-      </div>
+      </a>
     </div>
     <div class="col-md-2">
       <div class="card p-3 text-center">

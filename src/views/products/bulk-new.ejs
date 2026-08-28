@@ -1,0 +1,38 @@
+<%- include('../partials/head', { title: 'Siyahı ilə mal əlavə et' }) %>
+<%- include('../partials/nav') %>
+<div class="container py-4" style="max-width: 720px;">
+  <h3>Siyahı ilə mal əlavə et</h3>
+  <p class="text-muted">Hər sətirdə bir mal yazın. Ölçü vahidi avtomatik "ədəd" olacaq, barkod avtomatik yaradılacaq.</p>
+
+  <% if (error) { %>
+  <div class="alert alert-danger"><%= error %></div>
+  <% } %>
+
+  <form method="post" action="/products/bulk" class="card p-4">
+    <div class="mb-3">
+      <label class="form-label">Təchizatçı (könüllü, bütün siyahı üçün eynidir)</label>
+      <input type="text" name="supplierName" class="form-control" list="supplier-list" value="<%= supplierName %>">
+      <datalist id="supplier-list">
+        <% suppliers.forEach(s => { %><option value="<%= s.name %>"><% }) %>
+      </datalist>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Mallar</label>
+      <textarea name="rows" class="form-control" rows="12" style="font-family: monospace;" placeholder="Ad, Miqdar, Alış qiyməti, Satış qiyməti, Kateqoriya (könüllü)
+Çörək, 50, 0.40, 0.60
+Süd 1L, 20, 1.20, 1.60, Süd məhsulları
+Yumurta (10 ədəd), 15, 2.00, 2.80"><%= rawText %></textarea>
+      <div class="form-text">
+        Format: <code>Ad, Miqdar, Alış qiyməti, Satış qiyməti, Kateqoriya (könüllü)</code><br>
+        Rəqəmlərdə onluq ayırıcı kimi nöqtə "." işlədin (məs. 1.50). Çəki ilə satılan (kq) mallar üçün ayrıca "Yeni mal" formasından istifadə edin.
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Hamısını əlavə et</button>
+      <a href="/products/new" class="btn btn-outline-secondary">Tək mal əlavə et</a>
+    </div>
+  </form>
+</div>
+<%- include('../partials/foot') %>

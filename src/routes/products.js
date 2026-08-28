@@ -39,7 +39,8 @@ router.get('/', asyncHandler(async (req, res) => {
     distinct: ['category'],
   });
   const categories = categoryRows.map((c) => c.category).filter(Boolean).sort();
-  res.render('products/index', { products, q, category, categories });
+  const bulkAdded = req.query.bulk ? Number(req.query.bulk) : null;
+  res.render('products/index', { products, q, category, categories, bulkAdded });
 }));
 
 router.get('/new', asyncHandler(async (req, res) => {
@@ -95,6 +96,87 @@ router.post('/', asyncHandler(async (req, res) => {
   });
 
   res.redirect(`/products/${productId}/label`);
+}));
+
+router.get('/bulk-new', asyncHandler(async (req, res) => {
+  const suppliers = await prisma.supplier.findMany({ orderBy: { name: 'asc' } });
+  res.render('products/bulk-new', { suppliers, error: null, rawText: '', supplierName: '' });
+}));
+
+router.post('/bulk', asyncHandler(async (req, res) => {
+  const { supplierName, rows } = req.body;
+  const suppliers = await prisma.supplier.findMany({ orderBy: { name: 'asc' } });
+
+  const lines = (rows || '').split('\n').map((l) => l.trim()).filter(Boolean);
+  if (!lines.length) {
+    return res.render('products/bulk-new', {
+      suppliers, supplierName: supplierName || '', rawText: rows || '',
+      error: 'Siyahı boşdur.',
+    });
+  }
+
+  const parsed = [];
+  for (let i = 0; i < lines.length; i++) {
+    const parts = lines[i].split(',').map((p) => p.trim());
+    const [name, quantity, purchasePrice, salePrice, category] = parts;
+    if (!name || quantity === undefined || purchasePrice === undefined || salePrice === undefined) {
+      return res.render('products/bulk-new', {
+        suppliers, supplierName: supplierName || '', rawText: rows,
+        error: `${i + 1}-ci sətir yanlış formatdadır: "${lines[i]}". Format: Ad, Miqdar, Alış qiyməti, Satış qiyməti[, Kateqoriya]`,
+      });
+    }
+    const qtyNum = Number(quantity);
+    const purchaseNum = Number(purchasePrice);
+    const saleNum = Number(salePrice);
+    if (!Number.isFinite(qtyNum) || qtyNum < 0 || !Number.isFinite(purchaseNum) || purchaseNum < 0 || !Number.isFinite(saleNum) || saleNum < 0) {
+      return res.render('products/bulk-new', {
+        suppliers, supplierName: supplierName || '', rawText: rows,
+        error: `${i + 1}-ci sətirdə rəqəm yanlışdır: "${lines[i]}"`,
+      });
+    }
+    parsed.push({ name, quantity: qtyNum, purchasePrice: purchaseNum, salePrice: saleNum, category: category || null });
+  }
+
+  for (const p of parsed) {
+    p.barcode = await generateUniqueBarcode();
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const supplierId = await findOrCreateSupplier(tx, supplierName);
+    for (const p of parsed) {
+      const product = await tx.product.create({
+        data: {
+          name: p.name,
+          category: p.category,
+          barcode: p.barcode,
+          unit: 'PIECE',
+          purchasePrice: p.purchasePrice,
+          salePrice: p.salePrice,
+          quantity: p.quantity,
+          defaultSupplierId: supplierId,
+        },
+      });
+
+      if (p.quantity > 0) {
+        const totalAmount = round2(p.quantity * p.purchasePrice);
+        await tx.stockReceipt.create({
+          data: {
+            productId: product.id,
+            quantity: p.quantity,
+            purchasePrice: p.purchasePrice,
+            totalAmount,
+            paidAmount: totalAmount,
+            status: 'PAID',
+            supplierId,
+            supplierName: (supplierName || '').trim() || null,
+            receivedById: req.session.user.id,
+          },
+        });
+      }
+    }
+  });
+
+  res.redirect(`/products?bulk=${parsed.length}`);
 }));
 
 router.get('/:id', asyncHandler(async (req, res) => {

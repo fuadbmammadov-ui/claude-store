@@ -91,4 +91,19 @@ router.get('/', asyncHandler(async (req, res) => {
   });
 }));
 
+router.get('/today-sales', asyncHandler(async (req, res) => {
+  const from = startOfToday();
+  const type = ['CASH', 'CARD', 'TRANSFER', 'DEBT'].includes(req.query.type) ? req.query.type : null;
+
+  const sales = await prisma.sale.findMany({
+    where: { createdAt: { gte: from }, ...(type ? { paymentType: type } : {}) },
+    include: { items: true, cashier: true, customer: true },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const total = sales.reduce((s, x) => s + Number(x.totalAmount), 0);
+
+  res.render('today-sales', { sales, type, total });
+}));
+
 module.exports = router;

@@ -1,7 +1,12 @@
 <%- include('../partials/head', { title: product ? 'Malı redaktə et' : 'Yeni mal' }) %>
 <%- include('../partials/nav') %>
 <div class="container py-4" style="max-width: 640px;">
-  <h3><%= product ? 'Malı redaktə et' : 'Yeni mal / İlkin mal qəbulu' %></h3>
+  <div class="d-flex justify-content-between align-items-center">
+    <h3><%= product ? 'Malı redaktə et' : 'Yeni mal / İlkin mal qəbulu' %></h3>
+    <% if (!product) { %>
+    <a href="/products/bulk-new" class="btn btn-outline-secondary btn-sm">Siyahı ilə çoxlu mal əlavə et</a>
+    <% } %>
+  </div>
   <form method="post" action="<%= product ? '/products/' + product.id + '?_method=PUT' : '/products' %>" class="card p-4 mt-3">
     <div class="mb-3">
       <label class="form-label">Adı</label>
