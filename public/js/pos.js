@@ -84,10 +84,7 @@ function removeItem(idx) {
   renderCart();
 }
 
-barcodeInput.addEventListener('keydown', async (e) => {
-  if (e.key !== 'Enter') return;
-  const code = barcodeInput.value.trim();
-  barcodeInput.value = '';
+async function lookupAndAddToCart(code) {
   scanError.textContent = '';
   if (!code) return;
   try {
@@ -95,12 +92,21 @@ barcodeInput.addEventListener('keydown', async (e) => {
     const data = await resp.json();
     if (!resp.ok) {
       scanError.textContent = data.error || 'Xəta';
-      return;
+      return false;
     }
     addToCart(data);
+    return true;
   } catch (err) {
     scanError.textContent = 'Şəbəkə xətası';
+    return false;
   }
+}
+
+barcodeInput.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const code = barcodeInput.value.trim();
+  barcodeInput.value = '';
+  lookupAndAddToCart(code);
 });
 
 let searchTimer;
@@ -239,4 +245,99 @@ async function submitCheckout() {
   } catch (err) {
     document.getElementById('pay-error').textContent = 'Şəbəkə xətası';
   }
+}
+
+// --- Kamera ilə barkod skan ---
+const cameraScanBtn = document.getElementById('camera-scan-btn');
+const scanModalEl = document.getElementById('scan-modal');
+const scanVideo = document.getElementById('scan-video');
+const scanModalStatus = document.getElementById('scan-modal-status');
+const scanModalLast = document.getElementById('scan-modal-last');
+
+let scanModal;
+let scanStream = null;
+let scanRafId = null;
+let barcodeDetector = null;
+let lastScannedCode = null;
+let lastScannedAt = 0;
+
+if (cameraScanBtn && scanModalEl) {
+  scanModal = new bootstrap.Modal(scanModalEl);
+
+  cameraScanBtn.addEventListener('click', startCameraScan);
+  scanModalEl.addEventListener('hidden.bs.modal', stopCameraScan);
+}
+
+async function startCameraScan() {
+  scanModalLast.style.display = 'none';
+  scanModalLast.textContent = '';
+  lastScannedCode = null;
+
+  if (!('BarcodeDetector' in window)) {
+    scanModalStatus.textContent = 'Bu brauzer kamera ilə skanı dəstəkləmir. Google Chrome (Android) istifadə edin.';
+    scanModal.show();
+    return;
+  }
+
+  try {
+    barcodeDetector = new BarcodeDetector({
+      formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'qr_code'],
+    });
+  } catch (err) {
+    scanModalStatus.textContent = 'Barkod oxuyucu başladıla bilmədi.';
+    scanModal.show();
+    return;
+  }
+
+  scanModalStatus.textContent = 'Kamera açılır...';
+  scanModal.show();
+
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' },
+    });
+    scanVideo.srcObject = scanStream;
+    await scanVideo.play();
+    scanModalStatus.textContent = 'Barkodu kameraya tutun...';
+    scanRafId = requestAnimationFrame(scanFrame);
+  } catch (err) {
+    scanModalStatus.textContent = 'Kameraya icazə verilmədi və ya kamera tapılmadı.';
+  }
+}
+
+async function scanFrame() {
+  if (!scanStream) return;
+  try {
+    const barcodes = await barcodeDetector.detect(scanVideo);
+    if (barcodes.length) {
+      const code = barcodes[0].rawValue;
+      const now = Date.now();
+      if (code !== lastScannedCode || now - lastScannedAt > 2000) {
+        lastScannedCode = code;
+        lastScannedAt = now;
+        const ok = await lookupAndAddToCart(code);
+        if (ok) {
+          scanModalLast.style.display = 'block';
+          scanModalLast.textContent = 'Əlavə edildi: ' + code;
+        }
+      }
+    }
+  } catch (err) {
+    // frame ötürüldü, davam et
+  }
+  if (scanStream) {
+    scanRafId = requestAnimationFrame(scanFrame);
+  }
+}
+
+function stopCameraScan() {
+  if (scanRafId) {
+    cancelAnimationFrame(scanRafId);
+    scanRafId = null;
+  }
+  if (scanStream) {
+    scanStream.getTracks().forEach((t) => t.stop());
+    scanStream = null;
+  }
+  scanVideo.srcObject = null;
 }

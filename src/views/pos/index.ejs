@@ -5,7 +5,12 @@
     <div class="col-lg-7">
       <div class="card p-3 mb-3">
         <label class="form-label">Barkodu skan edin və ya daxil edin</label>
-        <input type="text" id="barcode-input" class="form-control" autofocus placeholder="Barkod...">
+        <div class="input-group">
+          <input type="text" id="barcode-input" class="form-control" autofocus placeholder="Barkod...">
+          <button type="button" class="btn btn-outline-primary" id="camera-scan-btn">
+            <i class="bi bi-camera-fill"></i> Kamera ilə skan et
+          </button>
+        </div>
         <div id="scan-error" class="text-danger mt-2"></div>
       </div>
       <div class="card p-3 mb-3">
@@ -83,6 +88,23 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" data-bs-dismiss="modal">İmtina</button>
         <button class="btn btn-primary" onclick="submitCheckout()">Təsdiqlə</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Kamera ile skan modal -->
+<div class="modal" id="scan-modal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Barkodu kameraya tutun</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <video id="scan-video" autoplay playsinline muted style="width:100%; border-radius:8px; background:#000;"></video>
+        <div id="scan-modal-status" class="text-muted mt-2"></div>
+        <div id="scan-modal-last" class="alert alert-success mt-2" style="display:none;"></div>
       </div>
     </div>
   </div>
