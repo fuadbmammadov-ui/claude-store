@@ -10,12 +10,14 @@
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/pos') ? 'active' : '' %>" href="/pos">Satış</a></li>
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/products') ? 'active' : '' %>" href="/products">Mallar</a></li>
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/customers') ? 'active' : '' %>" href="/customers">Müştərilər / Borclar</a></li>
-        <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/suppliers') ? 'active' : '' %>" href="/suppliers">Təchizatçılar</a></li>
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/cash-sessions') ? 'active' : '' %>" href="/cash-sessions">Kassa</a></li>
         <% if (currentUser && currentUser.role === 'ADMIN') { %>
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/expenses') ? 'active' : '' %>" href="/expenses">Xərclər</a></li>
+        <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/suppliers') ? 'active' : '' %>" href="/suppliers">Təchizatçılar</a></li>
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/reports') ? 'active' : '' %>" href="/reports">Hesabatlar</a></li>
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/users') ? 'active' : '' %>" href="/users">İstifadəçilər</a></li>
+        <% } else { %>
+        <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/expenses') ? 'active' : '' %>" href="/expenses/new">Xərc yaz</a></li>
         <% } %>
       </ul>
       <span class="navbar-text me-3 text-white-50">

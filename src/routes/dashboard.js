@@ -1,6 +1,7 @@
 const express = require('express');
 const prisma = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
+const { requireRole } = require('../middleware/auth');
 const { getMonthlyExpenseBreakdown } = require('../utils/expenseAmortization');
 
 const router = express.Router();
@@ -91,7 +92,8 @@ router.get('/', asyncHandler(async (req, res) => {
   });
 }));
 
-router.get('/today-sales', asyncHandler(async (req, res) => {
+// Odenis novu uzre satis mebleglerini gosterir - maliyye veziyyetidir, yalniz ADMIN.
+router.get('/today-sales', requireRole('ADMIN'), asyncHandler(async (req, res) => {
   const from = startOfToday();
   const type = ['CASH', 'CARD', 'TRANSFER', 'DEBT'].includes(req.query.type) ? req.query.type : null;
 

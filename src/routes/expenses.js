@@ -11,21 +11,13 @@ const CATEGORIES = [
   'DSMF', 'Nəqliyyat', 'Təmir', 'Avadanlıq', 'Qablaşdırma', 'Digər',
 ];
 
-router.use(requireRole('ADMIN'));
+// Xerc yazmaq (yeni xerc formu + yaratma) hem ADMIN, hem CASHIER ucun acidir -
+// satici xerci qeyd ede bilmelidir. Amma xerc siyahisi/cemi/silme yalniz ADMIN-e
+// gorunur, cunki bu maliyye veziyyetini gostərir.
 
-router.get('/', asyncHandler(async (req, res) => {
-  const monthParam = req.query.month; // format YYYY-MM
-  const now = new Date();
-  const [year, month] = monthParam
-    ? monthParam.split('-').map(Number)
-    : [now.getFullYear(), now.getMonth() + 1];
-
-  const { rows: expenses, total, byCategory } = await getMonthlyExpenseBreakdown(prisma, year, month);
-
-  const monthValue = `${year}-${String(month).padStart(2, '0')}`;
-
-  res.render('expenses/index', { expenses, total, byCategory, categories: CATEGORIES, monthValue });
-}));
+router.get('/new', (req, res) => {
+  res.render('expenses/new', { categories: CATEGORIES, added: req.query.added === '1' });
+});
 
 router.post('/', asyncHandler(async (req, res) => {
   const { category, name, amount, method, note, date, periodMonths } = req.body;
@@ -43,10 +35,26 @@ router.post('/', asyncHandler(async (req, res) => {
       ...(createdAt && !Number.isNaN(createdAt.getTime()) ? { createdAt } : {}),
     },
   });
-  res.redirect('/expenses');
+
+  if (req.session.user.role === 'ADMIN') return res.redirect('/expenses');
+  res.redirect('/expenses/new?added=1');
 }));
 
-router.delete('/:id', asyncHandler(async (req, res) => {
+router.get('/', requireRole('ADMIN'), asyncHandler(async (req, res) => {
+  const monthParam = req.query.month; // format YYYY-MM
+  const now = new Date();
+  const [year, month] = monthParam
+    ? monthParam.split('-').map(Number)
+    : [now.getFullYear(), now.getMonth() + 1];
+
+  const { rows: expenses, total, byCategory } = await getMonthlyExpenseBreakdown(prisma, year, month);
+
+  const monthValue = `${year}-${String(month).padStart(2, '0')}`;
+
+  res.render('expenses/index', { expenses, total, byCategory, categories: CATEGORIES, monthValue });
+}));
+
+router.delete('/:id', requireRole('ADMIN'), asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
   await prisma.expense.delete({ where: { id } });
   res.redirect('/expenses');

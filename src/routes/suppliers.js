@@ -5,6 +5,11 @@ const asyncHandler = require('../utils/asyncHandler');
 
 const router = express.Router();
 
+// Techizatci borcu/odenisleri maliyye veziyyetidir - yalniz ADMIN gorsun.
+// (Mal qebulu zamani techizatci adi products.js icinde avtomatik yaradilir/tapilir,
+// bu route-lara ehtiyac olmur.)
+router.use(requireRole('ADMIN'));
+
 router.get('/', asyncHandler(async (req, res) => {
   const q = (req.query.q || '').trim();
   const suppliers = await prisma.supplier.findMany({

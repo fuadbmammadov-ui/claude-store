@@ -7,6 +7,7 @@
   <div class="alert alert-warning">Kassa açıq deyil. <a href="/cash-sessions">Kassanı açın</a>.</div>
   <% } %>
 
+  <% if (currentUser.role === 'ADMIN') { %>
   <div class="row g-3 mb-4">
     <div class="col-md-2">
       <a href="/today-sales?type=CASH" class="card p-3 text-center text-decoration-none text-reset h-100">
@@ -49,10 +50,12 @@
       </div>
     </div>
   </div>
+  <% } %>
 
   <div class="d-flex gap-2 mb-4">
     <a href="/pos" class="btn btn-primary btn-lg">Satışa başla</a>
     <a href="/products/new" class="btn btn-outline-secondary btn-lg">Mal qəbulu</a>
+    <a href="/expenses/new" class="btn btn-outline-secondary btn-lg">Xərc yaz</a>
   </div>
 
   <% if (currentUser.role === 'ADMIN') { %>

@@ -1,0 +1,49 @@
+<%- include('../partials/head', { title: 'Yeni xərc' }) %>
+<%- include('../partials/nav') %>
+<div class="container py-4" style="max-width: 520px;">
+  <h3>Yeni xərc</h3>
+
+  <% if (added) { %>
+  <div class="alert alert-success">Xərc uğurla qeyd olundu.</div>
+  <% } %>
+
+  <form method="post" action="/expenses" class="card p-4 mt-3">
+    <div class="mb-3">
+      <label class="form-label">Kateqoriya</label>
+      <select name="category" class="form-select">
+        <% categories.forEach(c => { %><option value="<%= c %>"><%= c %></option><% }) %>
+      </select>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Ad / açıqlama</label>
+      <input type="text" name="name" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Tarix <span class="text-muted">(könüllü, boş saxlasanız bu gün)</span></label>
+      <input type="date" name="date" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Məbləğ (₼) <span class="text-muted">(ödənilən ümumi məbləğ)</span></label>
+      <input type="number" step="0.01" min="0.01" name="amount" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Neçə ay üçündür?</label>
+      <input type="number" step="1" min="1" name="periodMonths" class="form-control" value="1">
+      <div class="form-text">Aylıq xərc (icarə, maaş və s.) üçün 1. Uzun müddətli ödənişlər üçün əhatə etdiyi ay sayını yazın — məsələn illik reklam ödənişi üçün 12.</div>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Ödəniş növü</label>
+      <select name="method" class="form-select">
+        <option value="CASH">Nağd</option>
+        <option value="CARD">Kart</option>
+        <option value="TRANSFER">Köçürmə</option>
+      </select>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Qeyd (könüllü)</label>
+      <input type="text" name="note" class="form-control">
+    </div>
+    <button type="submit" class="btn btn-primary">Əlavə et</button>
+  </form>
+</div>
+<%- include('../partials/foot') %>
