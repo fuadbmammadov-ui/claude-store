@@ -20,6 +20,8 @@ const { money, qty } = require('./utils/format');
 
 const app = express();
 
+const ASSET_VERSION = process.env.RENDER_GIT_COMMIT || Date.now().toString();
+
 app.set('trust proxy', 1);
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -51,6 +53,7 @@ app.use((req, res, next) => {
   res.locals.path = req.path;
   res.locals.money = money;
   res.locals.qty = qty;
+  res.locals.assetVersion = ASSET_VERSION;
   next();
 });
 
