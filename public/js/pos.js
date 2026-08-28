@@ -131,6 +131,18 @@ nameSearch.addEventListener('input', () => {
   }, 250);
 });
 
+document.querySelectorAll('.quick-pick-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    addToCart({
+      id: Number(btn.dataset.id),
+      name: btn.dataset.name,
+      unit: btn.dataset.unit,
+      salePrice: Number(btn.dataset.price),
+      quantity: Number(btn.dataset.qty),
+    });
+  });
+});
+
 function openPayModal(type) {
   if (cart.length === 0 || cart.every((c) => c.quantity <= 0)) {
     alert('Səbət boşdur');

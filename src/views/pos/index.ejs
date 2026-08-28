@@ -8,11 +8,26 @@
         <input type="text" id="barcode-input" class="form-control" autofocus placeholder="Barkod...">
         <div id="scan-error" class="text-danger mt-2"></div>
       </div>
-      <div class="card p-3">
+      <div class="card p-3 mb-3">
         <label class="form-label">Və ya ad üzrə axtar</label>
         <input type="text" id="name-search" class="form-control" placeholder="Mal adı...">
         <div id="search-results" class="list-group mt-2"></div>
       </div>
+      <% if (quickProducts && quickProducts.length) { %>
+      <div class="card p-3">
+        <label class="form-label mb-2"><i class="bi bi-lightning-charge-fill text-warning"></i> Tez satış — ən çox satılan mallar</label>
+        <div class="quick-pick-grid">
+          <% quickProducts.forEach(p => { %>
+          <button type="button" class="quick-pick-btn"
+            data-id="<%= p.id %>" data-name="<%= p.name %>" data-unit="<%= p.unit %>"
+            data-price="<%= p.salePrice %>" data-qty="<%= p.quantity %>">
+            <span class="quick-pick-name"><%= p.name %></span>
+            <span class="quick-pick-price"><%= money(p.salePrice) %> ₼</span>
+          </button>
+          <% }) %>
+        </div>
+      </div>
+      <% } %>
     </div>
 
     <div class="col-lg-5">
@@ -30,10 +45,10 @@
           <input type="text" id="sale-note" class="form-control" placeholder="Məs: müştəri qeydi...">
         </div>
         <div class="d-grid gap-2">
-          <button class="btn btn-success" onclick="openPayModal('CASH')">Nağd ödə</button>
-          <button class="btn btn-primary" onclick="openPayModal('CARD')">Kartla ödə</button>
-          <button class="btn btn-info" onclick="openPayModal('TRANSFER')">Köçürmə ilə ödə</button>
-          <button class="btn btn-warning" onclick="openPayModal('DEBT')">Borca yaz</button>
+          <button class="btn btn-success btn-lg" onclick="openPayModal('CASH')"><i class="bi bi-cash-stack"></i> Nağd ödə</button>
+          <button class="btn btn-primary btn-lg" onclick="openPayModal('CARD')"><i class="bi bi-credit-card"></i> Kartla ödə</button>
+          <button class="btn btn-info btn-lg text-white" onclick="openPayModal('TRANSFER')"><i class="bi bi-bank"></i> Köçürmə ilə ödə</button>
+          <button class="btn btn-warning btn-lg" onclick="openPayModal('DEBT')"><i class="bi bi-journal-text"></i> Borca yaz</button>
         </div>
       </div>
     </div>

@@ -1,23 +1,146 @@
-body {
-  background-color: #f4f6f8;
+:root {
+  --brand: #4f46e5;
+  --brand-dark: #3730a3;
+  --surface: #ffffff;
+  --bg: #f3f4f8;
+  --ink: #1f2430;
+  --muted: #6b7280;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow-sm: 0 1px 3px rgba(17, 24, 39, 0.06), 0 1px 2px rgba(17, 24, 39, 0.04);
+  --shadow-md: 0 6px 16px rgba(17, 24, 39, 0.08);
 }
 
+body {
+  background-color: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- Navbar ---------- */
+.navbar {
+  background-color: #14161f !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+}
+
+.navbar .nav-link {
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem !important;
+  margin: 0 0.1rem;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.navbar .nav-link:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.navbar .nav-link.active {
+  background-color: var(--brand);
+  color: #fff !important;
+}
+
+/* ---------- Cards ---------- */
 .card {
   border: none;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+a.card {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+a.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* ---------- Buttons ---------- */
+.btn {
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  transition: transform 0.08s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background-color: var(--brand);
+  border-color: var(--brand);
+}
+
+.btn-primary:hover, .btn-primary:focus {
+  background-color: var(--brand-dark);
+  border-color: var(--brand-dark);
+}
+
+.btn-lg {
+  border-radius: var(--radius);
+}
+
+/* ---------- Tables ---------- */
+.table {
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .table td, .table th {
   vertical-align: middle;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
 }
 
+.table thead th {
+  background-color: #f8f9fc;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #eceef3;
+}
+
+.table-hover tbody tr:hover {
+  background-color: #f5f6fb;
+}
+
+/* ---------- Forms ---------- */
+.form-control, .form-select {
+  border-radius: var(--radius-sm);
+  border-color: #dde1e8;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.15);
+}
+
+/* ---------- Login ---------- */
 .login-wrapper {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(135deg, #4f46e5 0%, #14161f 100%);
 }
 
+.login-wrapper .card {
+  box-shadow: var(--shadow-md);
+}
+
+/* ---------- POS ---------- */
 #barcode-input {
   font-size: 1.3rem;
   height: 3rem;
@@ -25,6 +148,50 @@ body {
 
 .debt-badge {
   font-size: 0.9rem;
+}
+
+.quick-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(115px, 1fr));
+  gap: 0.6rem;
+}
+
+.quick-pick-btn {
+  border: 1px solid #e3e5ec;
+  background: #fff;
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 78px;
+  cursor: pointer;
+  text-align: center;
+  transition: transform 0.08s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.quick-pick-btn:hover {
+  border-color: var(--brand);
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.15);
+}
+
+.quick-pick-btn:active {
+  transform: scale(0.96);
+  background: #eef0fe;
+}
+
+.quick-pick-name {
+  font-weight: 600;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.quick-pick-price {
+  font-size: 0.8rem;
+  color: var(--muted);
 }
 
 @media print {

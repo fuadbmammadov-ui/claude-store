@@ -26,9 +26,39 @@ function saleNotificationText(sale) {
   );
 }
 
-router.get('/', (req, res) => {
-  res.render('pos/index');
-});
+router.get('/', asyncHandler(async (req, res) => {
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+
+  const topItems = await prisma.saleItem.groupBy({
+    by: ['productId'],
+    where: { sale: { createdAt: { gte: since } } },
+    _sum: { quantity: true },
+    orderBy: { _sum: { quantity: 'desc' } },
+    take: 12,
+  });
+
+  let quickProducts = [];
+  if (topItems.length) {
+    const ids = topItems.map((t) => t.productId);
+    const products = await prisma.product.findMany({
+      where: { id: { in: ids }, active: true, quantity: { gt: 0 } },
+    });
+    const order = new Map(ids.map((id, i) => [id, i]));
+    quickProducts = products.sort((a, b) => order.get(a.id) - order.get(b.id));
+  }
+
+  if (quickProducts.length < 6) {
+    const fallback = await prisma.product.findMany({
+      where: { active: true, quantity: { gt: 0 }, id: { notIn: quickProducts.map((p) => p.id) } },
+      orderBy: { createdAt: 'desc' },
+      take: 12 - quickProducts.length,
+    });
+    quickProducts = quickProducts.concat(fallback);
+  }
+
+  res.render('pos/index', { quickProducts });
+}));
 
 router.get('/lookup', asyncHandler(async (req, res) => {
   const barcode = (req.query.barcode || '').trim();
