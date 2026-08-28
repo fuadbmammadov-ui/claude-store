@@ -2,6 +2,7 @@ const express = require('express');
 const prisma = require('../config/db');
 const { requireRole } = require('../middleware/auth');
 const asyncHandler = require('../utils/asyncHandler');
+const { getMonthlyExpenseBreakdown } = require('../utils/expenseAmortization');
 
 const router = express.Router();
 
@@ -19,20 +20,7 @@ router.get('/', asyncHandler(async (req, res) => {
     ? monthParam.split('-').map(Number)
     : [now.getFullYear(), now.getMonth() + 1];
 
-  const from = new Date(Date.UTC(year, month - 1, 1));
-  const to = new Date(Date.UTC(year, month, 1));
-
-  const expenses = await prisma.expense.findMany({
-    where: { createdAt: { gte: from, lt: to } },
-    include: { createdBy: true },
-    orderBy: { createdAt: 'desc' },
-  });
-
-  const total = expenses.reduce((s, e) => s + Number(e.amount), 0);
-  const byCategory = {};
-  expenses.forEach((e) => {
-    byCategory[e.category] = (byCategory[e.category] || 0) + Number(e.amount);
-  });
+  const { rows: expenses, total, byCategory } = await getMonthlyExpenseBreakdown(prisma, year, month);
 
   const monthValue = `${year}-${String(month).padStart(2, '0')}`;
 
@@ -40,13 +28,15 @@ router.get('/', asyncHandler(async (req, res) => {
 }));
 
 router.post('/', asyncHandler(async (req, res) => {
-  const { category, name, amount, method, note, date } = req.body;
+  const { category, name, amount, method, note, date, periodMonths } = req.body;
   const createdAt = date ? new Date(`${date}T12:00:00Z`) : undefined;
+  const period = Math.max(1, parseInt(periodMonths, 10) || 1);
   await prisma.expense.create({
     data: {
       category: category || 'Digər',
       name: name.trim(),
       amount: amount || 0,
+      periodMonths: period,
       method: ['CASH', 'CARD', 'TRANSFER'].includes(method) ? method : 'CASH',
       note: (note || '').trim() || null,
       createdById: req.session.user.id,

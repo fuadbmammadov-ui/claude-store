@@ -1,6 +1,7 @@
 const express = require('express');
 const prisma = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
+const { getMonthlyExpenseBreakdown } = require('../utils/expenseAmortization');
 
 const router = express.Router();
 
@@ -39,17 +40,13 @@ router.get('/', asyncHandler(async (req, res) => {
   const monthSaleItems = await prisma.saleItem.findMany({
     where: { sale: { createdAt: { gte: monthFrom, lt: monthTo } } },
   });
-  const monthExpenses = await prisma.expense.aggregate({
-    _sum: { amount: true },
-    where: { createdAt: { gte: monthFrom, lt: monthTo } },
-  });
+  const { total: monthExpenseTotal } = await getMonthlyExpenseBreakdown(prisma, year, month);
 
   const monthRevenue = monthSaleItems.reduce((s, it) => s + Number(it.lineTotal), 0);
   const monthGrossProfit = monthSaleItems.reduce(
     (s, it) => s + (Number(it.lineTotal) - Number(it.purchasePrice) * Number(it.quantity)),
     0
   );
-  const monthExpenseTotal = Number(monthExpenses._sum.amount || 0);
   const monthNetProfit = monthGrossProfit - monthExpenseTotal;
 
   const byProduct = {};

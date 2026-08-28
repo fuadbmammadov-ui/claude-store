@@ -113,15 +113,16 @@ model SupplierPayment {
 }
 
 model Expense {
-  id          Int         @id @default(autoincrement())
-  category    String
-  name        String
-  amount      Decimal     @db.Decimal(12, 2)
-  method      PaymentType
-  note        String?
-  createdBy   User        @relation(fields: [createdById], references: [id])
-  createdById Int
-  createdAt   DateTime    @default(now())
+  id           Int         @id @default(autoincrement())
+  category     String
+  name         String
+  amount       Decimal     @db.Decimal(12, 2)
+  periodMonths Int         @default(1)
+  method       PaymentType
+  note         String?
+  createdBy    User        @relation(fields: [createdById], references: [id])
+  createdById  Int
+  createdAt    DateTime    @default(now())
 }
 
 model Customer {

@@ -28,19 +28,31 @@
   </div>
 
   <table class="table bg-white">
-    <thead><tr><th>Tarix</th><th>Kateqoriya</th><th>Ad</th><th>Məbləğ</th><th>Ödəniş</th><th>Qeyd</th><th>Əlavə edən</th><th></th></tr></thead>
+    <thead><tr><th>Tarix</th><th>Kateqoriya</th><th>Ad</th><th>Aylıq məbləğ</th><th>Ödəniş</th><th>Qeyd</th><th>Əlavə edən</th><th></th></tr></thead>
     <tbody>
       <% expenses.forEach(e => { %>
       <tr>
         <td><%= new Date(e.createdAt).toLocaleDateString('az-AZ') %></td>
         <td><%= e.category %></td>
-        <td><%= e.name %></td>
-        <td><%= money(e.amount) %> ₼</td>
+        <td>
+          <%= e.name %>
+          <% if (e.isSplit) { %>
+          <span class="badge bg-info-subtle text-info-emphasis" title="Cəmi <%= money(e.amount) %> ₼, <%= e.periodMonths %> aya bölünüb">
+            <%= e.periodMonths %> aylıq
+          </span>
+          <% } %>
+        </td>
+        <td>
+          <%= money(e.monthlyAmount) %> ₼
+          <% if (e.isSplit) { %>
+          <div class="text-muted small">cəmi <%= money(e.amount) %> ₼ / <%= e.periodMonths %> ay</div>
+          <% } %>
+        </td>
         <td><%= e.method === 'CASH' ? 'Nağd' : e.method === 'CARD' ? 'Kart' : 'Köçürmə' %></td>
         <td><%= e.note || '-' %></td>
         <td><%= e.createdBy.fullName %></td>
         <td>
-          <form method="post" action="/expenses/<%= e.id %>?_method=DELETE" onsubmit="return confirm('Bu xərc silinsin?');">
+          <form method="post" action="/expenses/<%= e.id %>?_method=DELETE" onsubmit="return confirm('Bu xərc silinsin? (Bütün aylara bölünmüş məbləğ silinəcək)');">
             <button class="btn btn-sm btn-outline-danger">Sil</button>
           </form>
         </td>
@@ -77,8 +89,13 @@
             <input type="date" name="date" class="form-control">
           </div>
           <div class="mb-3">
-            <label class="form-label">Məbləğ (₼)</label>
+            <label class="form-label">Məbləğ (₼) <span class="text-muted">(ödənilən ümumi məbləğ)</span></label>
             <input type="number" step="0.01" min="0.01" name="amount" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Neçə ay üçündür?</label>
+            <input type="number" step="1" min="1" name="periodMonths" class="form-control" value="1">
+            <div class="form-text">Aylıq xərc (icarə, maaş və s.) üçün 1. Uzun müddətli ödənişlər üçün əhatə etdiyi ay sayını yazın — məsələn illik reklam ödənişi üçün 12, rüblük üçün 3. Məbləğ həmin aylara bərabər bölünəcək.</div>
           </div>
           <div class="mb-3">
             <label class="form-label">Ödəniş növü</label>

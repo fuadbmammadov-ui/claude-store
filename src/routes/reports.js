@@ -2,6 +2,7 @@ const express = require('express');
 const prisma = require('../config/db');
 const { requireRole } = require('../middleware/auth');
 const asyncHandler = require('../utils/asyncHandler');
+const { getMonthlyExpenseBreakdown } = require('../utils/expenseAmortization');
 
 const router = express.Router();
 
@@ -74,10 +75,10 @@ router.get('/daily', asyncHandler(async (req, res) => {
 router.get('/monthly', asyncHandler(async (req, res) => {
   const { year, month, from, to, daysInMonth } = monthRange(req);
 
-  const [saleItems, sales, expenses, supplierDebtRows, activeProducts] = await Promise.all([
+  const [saleItems, sales, { total: expenseTotal }, supplierDebtRows, activeProducts] = await Promise.all([
     prisma.saleItem.findMany({ where: { sale: { createdAt: { gte: from, lt: to } } } }),
     prisma.sale.findMany({ where: { createdAt: { gte: from, lt: to } } }),
-    prisma.expense.aggregate({ _sum: { amount: true }, where: { createdAt: { gte: from, lt: to } } }),
+    getMonthlyExpenseBreakdown(prisma, year, month),
     prisma.stockReceipt.findMany({ where: { status: 'DEBT' }, select: { totalAmount: true, paidAmount: true } }),
     prisma.product.findMany({ where: { active: true }, select: { quantity: true, purchasePrice: true } }),
   ]);
@@ -86,7 +87,6 @@ router.get('/monthly', asyncHandler(async (req, res) => {
   const cogs = saleItems.reduce((s, it) => s + Number(it.purchasePrice) * Number(it.quantity), 0);
   const grossProfit = revenue - cogs;
   const grossMarginPct = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
-  const expenseTotal = Number(expenses._sum.amount || 0);
   const netProfit = grossProfit - expenseTotal;
   const netMarginPct = revenue > 0 ? (netProfit / revenue) * 100 : 0;
 
