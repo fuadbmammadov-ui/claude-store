@@ -1,8 +1,30 @@
 const express = require('express');
 const prisma = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
+const { sendTelegramMessage } = require('../utils/telegram');
+const { money, qty } = require('../utils/format');
 
 const router = express.Router();
+
+function paymentLabel(type) {
+  return type === 'CASH' ? 'Nağd' : type === 'CARD' ? 'Kart' : type === 'TRANSFER' ? 'Köçürmə' : 'Borc';
+}
+
+function saleNotificationText(sale) {
+  const time = new Date(sale.createdAt).toLocaleTimeString('az-AZ');
+  const itemLines = sale.items
+    .map((it) => `• ${it.productName} ${qty(it.quantity, it.unit)} x ${money(it.unitPrice)} ₼ = ${money(it.lineTotal)} ₼`)
+    .join('\n');
+  const customerLine = sale.customer ? `\nMüştəri: ${sale.customer.name}` : '';
+
+  return (
+    `🛒 Yeni satış #${sale.id} (${time})\n` +
+    `Satıcı: ${sale.cashier.fullName}\n` +
+    `Ödəniş: ${paymentLabel(sale.paymentType)}${customerLine}\n\n` +
+    `${itemLines}\n\n` +
+    `Cəmi: ${money(sale.totalAmount)} ₼`
+  );
+}
 
 router.get('/', (req, res) => {
   res.render('pos/index');
@@ -123,11 +145,13 @@ router.post('/checkout', async (req, res) => {
           note: (note || '').trim() || null,
           items: { create: saleItemsData },
         },
-        include: { items: true, customer: true },
+        include: { items: true, customer: true, cashier: true },
       });
 
       return sale;
     });
+
+    sendTelegramMessage(saleNotificationText(result));
 
     res.json({ success: true, saleId: result.id });
   } catch (err) {
