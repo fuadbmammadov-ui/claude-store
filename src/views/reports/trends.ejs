@@ -1,0 +1,240 @@
+<%- include('../partials/head', { title: 'Analiz' }) %>
+<%- include('../partials/nav') %>
+<style>
+  .viz-card { background: #fcfcfb; border: 1px solid #e1e0d9; border-radius: .5rem; padding: 1rem; }
+  .viz-title { font-size: .95rem; font-weight: 600; color: #0b0b0b; margin-bottom: .75rem; }
+  .viz-chart-wrap { position: relative; }
+  .kpi-label { color: #52514e; font-size: .8rem; }
+  .kpi-value { font-size: 1.4rem; font-weight: 700; color: #0b0b0b; }
+  .kpi-sub { color: #898781; font-size: .75rem; }
+</style>
+<div class="container-fluid py-4">
+  <h3>Analiz</h3>
+  <%- include('_subnav', { active: 'trends' }) %>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="viz-card">
+        <div class="kpi-label">Bu ay indiyədək satış</div>
+        <div class="kpi-value"><%= money(monthToDateRevenue) %> ₼</div>
+        <div class="kpi-sub"><%= daysElapsed %> / <%= daysInMonth %> gün keçib</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="viz-card">
+        <div class="kpi-label">Gündəlik run rate (orta)</div>
+        <div class="kpi-value"><%= money(dailyRunRate) %> ₼</div>
+        <div class="kpi-sub">gün başına orta satış</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="viz-card">
+        <div class="kpi-label">Ay üzrə proyeksiya</div>
+        <div class="kpi-value"><%= money(projectedMonthRevenue) %> ₼</div>
+        <div class="kpi-sub">bu templə ay sonu</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="viz-card">
+        <div class="kpi-label">İllik run rate</div>
+        <div class="kpi-value"><%= money(annualRunRate) %> ₼</div>
+        <div class="kpi-sub">proyeksiya × 12</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-lg-6">
+      <div class="viz-card">
+        <div class="viz-title">Gündəlik satış gedişatı (son 30 gün)</div>
+        <div class="viz-chart-wrap" style="height:260px;">
+          <canvas id="chartDaily"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="viz-card">
+        <div class="viz-title">Aylıq satış gedişatı (son 12 ay)</div>
+        <div class="viz-chart-wrap" style="height:260px;">
+          <canvas id="chartMonthly"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-lg-6">
+      <div class="viz-card">
+        <div class="viz-title">Gəlir / Xərc / Mənfəət (son 6 ay)</div>
+        <div class="viz-chart-wrap" style="height:280px;">
+          <canvas id="chartFinance"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3">
+      <div class="viz-card h-100">
+        <div class="viz-title">Ödəniş növü üzrə (bu ay)</div>
+        <div class="viz-chart-wrap" style="height:280px;">
+          <canvas id="chartPayment"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3">
+      <div class="viz-card h-100">
+        <div class="viz-title">Ən çox satılan mallar (bu ay)</div>
+        <div class="viz-chart-wrap" style="height:280px;">
+          <canvas id="chartProducts"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  var INK_SECONDARY = '#52514e';
+  var INK_MUTED = '#898781';
+  var GRID = '#e1e0d9';
+  var SERIES = { blue: '#2a78d6', orange: '#eb6834', aqua: '#1baf7a', yellow: '#eda100' };
+
+  var moneyFmt = new Intl.NumberFormat('az-AZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  function fmt(v) { return moneyFmt.format(v) + ' ₼'; }
+
+  Chart.defaults.font.family = "system-ui, -apple-system, 'Segoe UI', sans-serif";
+  Chart.defaults.color = INK_MUTED;
+
+  var baseScales = {
+    x: { grid: { display: false }, ticks: { color: INK_MUTED, font: { size: 11 } } },
+    y: {
+      beginAtZero: true,
+      grid: { color: GRID },
+      border: { display: false },
+      ticks: { color: INK_MUTED, font: { size: 11 }, callback: function (v) { return moneyFmt.format(v); } },
+    },
+  };
+
+  // Gündəlik satış - line
+  new Chart(document.getElementById('chartDaily'), {
+    type: 'line',
+    data: {
+      labels: <%- JSON.stringify(dailyLabels) %>,
+      datasets: [{
+        data: <%- JSON.stringify(dailyValues) %>,
+        borderColor: SERIES.blue,
+        backgroundColor: 'rgba(42,120,214,0.08)',
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: SERIES.blue,
+        tension: 0.25,
+        fill: true,
+      }],
+    },
+    options: {
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function (ctx) { return fmt(ctx.parsed.y); } } },
+      },
+      interaction: { mode: 'index', intersect: false },
+      scales: baseScales,
+    },
+  });
+
+  // Aylıq satış - bar
+  new Chart(document.getElementById('chartMonthly'), {
+    type: 'bar',
+    data: {
+      labels: <%- JSON.stringify(monthlyLabels) %>,
+      datasets: [{
+        data: <%- JSON.stringify(monthlyValues) %>,
+        backgroundColor: SERIES.blue,
+        borderRadius: 4,
+        maxBarThickness: 28,
+      }],
+    },
+    options: {
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function (ctx) { return fmt(ctx.parsed.y); } } },
+      },
+      scales: baseScales,
+    },
+  });
+
+  // Gəlir / Xərc / Mənfəət - line, 3 seriya
+  var financeLabels = <%- JSON.stringify(financeTrend.map(f => f.label)) %>;
+  new Chart(document.getElementById('chartFinance'), {
+    type: 'line',
+    data: {
+      labels: financeLabels,
+      datasets: [
+        { label: 'Gəlir', data: <%- JSON.stringify(financeTrend.map(f => f.revenue)) %>, borderColor: SERIES.blue, backgroundColor: SERIES.blue, borderWidth: 2, pointRadius: 4, tension: 0.2 },
+        { label: 'Xərc', data: <%- JSON.stringify(financeTrend.map(f => f.expenses)) %>, borderColor: SERIES.orange, backgroundColor: SERIES.orange, borderWidth: 2, pointRadius: 4, tension: 0.2 },
+        { label: 'Net mənfəət', data: <%- JSON.stringify(financeTrend.map(f => f.netProfit)) %>, borderColor: SERIES.aqua, backgroundColor: SERIES.aqua, borderWidth: 2, pointRadius: 4, tension: 0.2 },
+      ],
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom', labels: { color: INK_SECONDARY, boxWidth: 10, boxHeight: 10, usePointStyle: true, pointStyle: 'circle' } },
+        tooltip: { callbacks: { label: function (ctx) { return ctx.dataset.label + ': ' + fmt(ctx.parsed.y); } } },
+      },
+      interaction: { mode: 'index', intersect: false },
+      scales: baseScales,
+    },
+  });
+
+  // Ödəniş növü - horizontal bar
+  var paymentLabels = <%- JSON.stringify(paymentBreakdown.map(p => p.label)) %>;
+  var paymentValues = <%- JSON.stringify(paymentBreakdown.map(p => p.value)) %>;
+  new Chart(document.getElementById('chartPayment'), {
+    type: 'bar',
+    data: {
+      labels: paymentLabels,
+      datasets: [{
+        data: paymentValues,
+        backgroundColor: [SERIES.blue, SERIES.orange, SERIES.aqua, SERIES.yellow],
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function (ctx) { return fmt(ctx.parsed.x); } } },
+      },
+      scales: {
+        x: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { color: INK_MUTED, font: { size: 11 }, callback: function (v) { return moneyFmt.format(v); } } },
+        y: { grid: { display: false }, ticks: { color: INK_MUTED, font: { size: 11 } } },
+      },
+    },
+  });
+
+  // Ən çox satılan mallar - horizontal bar
+  var productLabels = <%- JSON.stringify(topProducts.map(p => p.name)) %>;
+  var productValues = <%- JSON.stringify(topProducts.map(p => p.revenue)) %>;
+  new Chart(document.getElementById('chartProducts'), {
+    type: 'bar',
+    data: {
+      labels: productLabels,
+      datasets: [{
+        data: productValues,
+        backgroundColor: SERIES.blue,
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function (ctx) { return fmt(ctx.parsed.x); } } },
+      },
+      scales: {
+        x: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { color: INK_MUTED, font: { size: 11 }, callback: function (v) { return moneyFmt.format(v); } } },
+        y: { grid: { display: false }, ticks: { color: INK_MUTED, font: { size: 11 } } },
+      },
+    },
+  });
+})();
+</script>
+<%- include('../partials/foot') %>

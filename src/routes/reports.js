@@ -119,6 +119,135 @@ router.get('/monthly', asyncHandler(async (req, res) => {
   });
 }));
 
+function localDateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+router.get('/trends', asyncHandler(async (req, res) => {
+  const now = new Date();
+
+  // Gündəlik gedişat - son 30 gün
+  const DAYS = 30;
+  const dayFrom = new Date(now);
+  dayFrom.setHours(0, 0, 0, 0);
+  dayFrom.setDate(dayFrom.getDate() - (DAYS - 1));
+
+  const dailySales = await prisma.sale.findMany({
+    where: { createdAt: { gte: dayFrom } },
+    select: { totalAmount: true, createdAt: true },
+  });
+
+  const dayBuckets = new Map();
+  for (let i = 0; i < DAYS; i++) {
+    const d = new Date(dayFrom);
+    d.setDate(d.getDate() + i);
+    dayBuckets.set(localDateKey(d), 0);
+  }
+  dailySales.forEach((s) => {
+    const key = localDateKey(s.createdAt);
+    if (dayBuckets.has(key)) dayBuckets.set(key, dayBuckets.get(key) + Number(s.totalAmount));
+  });
+  const dailyLabels = [...dayBuckets.keys()].map((k) => k.slice(5).split('-').reverse().join('.'));
+  const dailyValues = [...dayBuckets.values()];
+
+  // Aylıq gedişat - son 12 ay
+  const MONTHS = 12;
+  const monthNames = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'İyn', 'İyl', 'Avq', 'Sen', 'Okt', 'Noy', 'Dek'];
+  const monthFrom = new Date(Date.UTC(now.getFullYear(), now.getMonth() - (MONTHS - 1), 1));
+  const monthlySales = await prisma.sale.findMany({
+    where: { createdAt: { gte: monthFrom } },
+    select: { totalAmount: true, createdAt: true },
+  });
+
+  const monthBuckets = new Map();
+  for (let i = 0; i < MONTHS; i++) {
+    const d = new Date(Date.UTC(now.getFullYear(), now.getMonth() - (MONTHS - 1) + i, 1));
+    monthBuckets.set(`${d.getUTCFullYear()}-${d.getUTCMonth()}`, 0);
+  }
+  monthlySales.forEach((s) => {
+    const key = `${s.createdAt.getUTCFullYear()}-${s.createdAt.getUTCMonth()}`;
+    if (monthBuckets.has(key)) monthBuckets.set(key, monthBuckets.get(key) + Number(s.totalAmount));
+  });
+  const monthlyLabels = [...monthBuckets.keys()].map((k) => {
+    const [y, m] = k.split('-').map(Number);
+    return `${monthNames[m]} ${y}`;
+  });
+  const monthlyValues = [...monthBuckets.values()];
+
+  // Run rate - cari ayın gedişatına əsasən proyeksiya
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  monthStart.setHours(0, 0, 0, 0);
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysElapsed = now.getDate();
+  const monthToDateAgg = await prisma.sale.aggregate({
+    _sum: { totalAmount: true },
+    where: { createdAt: { gte: monthStart } },
+  });
+  const monthToDateRevenue = Number(monthToDateAgg._sum.totalAmount || 0);
+  const dailyRunRate = daysElapsed > 0 ? monthToDateRevenue / daysElapsed : 0;
+  const projectedMonthRevenue = dailyRunRate * daysInMonth;
+  const annualRunRate = projectedMonthRevenue * 12;
+
+  // Gəlir / xərc / mənfəət gedişatı - son 6 ay
+  const FIN_MONTHS = 6;
+  const financeTrend = [];
+  for (let i = FIN_MONTHS - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(now.getFullYear(), now.getMonth() - i, 1));
+    const y = d.getUTCFullYear();
+    const m = d.getUTCMonth() + 1;
+    const mFrom = new Date(Date.UTC(y, m - 1, 1));
+    const mTo = new Date(Date.UTC(y, m, 1));
+    // eslint-disable-next-line no-await-in-loop
+    const items = await prisma.saleItem.findMany({ where: { sale: { createdAt: { gte: mFrom, lt: mTo } } } });
+    const rev = items.reduce((s, it) => s + Number(it.lineTotal), 0);
+    const cost = items.reduce((s, it) => s + Number(it.purchasePrice) * Number(it.quantity), 0);
+    // eslint-disable-next-line no-await-in-loop
+    const { total: exp } = await getMonthlyExpenseBreakdown(prisma, y, m);
+    financeTrend.push({
+      label: `${monthNames[m - 1]} ${y}`,
+      revenue: rev,
+      expenses: exp,
+      netProfit: rev - cost - exp,
+    });
+  }
+
+  // Ödəniş növü üzrə paylanma - cari ay
+  const [cashAgg, cardAgg, transferAgg, debtAgg] = await Promise.all([
+    prisma.sale.aggregate({ _sum: { paidAmount: true }, where: { paymentType: 'CASH', createdAt: { gte: monthStart } } }),
+    prisma.sale.aggregate({ _sum: { paidAmount: true }, where: { paymentType: 'CARD', createdAt: { gte: monthStart } } }),
+    prisma.sale.aggregate({ _sum: { paidAmount: true }, where: { paymentType: 'TRANSFER', createdAt: { gte: monthStart } } }),
+    prisma.sale.aggregate({ _sum: { totalAmount: true }, where: { paymentType: 'DEBT', createdAt: { gte: monthStart } } }),
+  ]);
+  const paymentBreakdown = [
+    { label: 'Nağd', value: Number(cashAgg._sum.paidAmount || 0) },
+    { label: 'Kart', value: Number(cardAgg._sum.paidAmount || 0) },
+    { label: 'Köçürmə', value: Number(transferAgg._sum.paidAmount || 0) },
+    { label: 'Borc', value: Number(debtAgg._sum.totalAmount || 0) },
+  ];
+
+  // Ən çox satılan mallar (məbləğ üzrə) - cari ay, top 5
+  const monthItems = await prisma.saleItem.findMany({
+    where: { sale: { createdAt: { gte: monthStart } } },
+  });
+  const byProduct = {};
+  monthItems.forEach((it) => {
+    const key = it.productName;
+    byProduct[key] = (byProduct[key] || 0) + Number(it.lineTotal);
+  });
+  const topProducts = Object.entries(byProduct)
+    .map(([name, revenue]) => ({ name, revenue }))
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5);
+
+  res.render('reports/trends', {
+    dailyLabels, dailyValues,
+    monthlyLabels, monthlyValues,
+    monthToDateRevenue, daysElapsed, daysInMonth,
+    dailyRunRate, projectedMonthRevenue, annualRunRate,
+    financeTrend, paymentBreakdown, topProducts,
+  });
+}));
+
 router.get('/products', asyncHandler(async (req, res) => {
   const { year, month, from, to } = monthRange(req);
 
