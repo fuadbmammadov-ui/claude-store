@@ -4,19 +4,19 @@
   <div class="row">
     <div class="col-lg-7">
       <div class="card p-3 mb-3">
-        <label class="form-label">Barkodu skan edin və ya daxil edin</label>
+        <label class="form-label">Ad üzrə axtar</label>
+        <input type="text" id="name-search" class="form-control" autofocus placeholder="Mal adı...">
+        <div id="search-results" class="list-group mt-2"></div>
+      </div>
+      <div class="card p-3 mb-3">
+        <label class="form-label">Və ya barkodu skan edin/daxil edin</label>
         <div class="input-group">
-          <input type="text" id="barcode-input" class="form-control" autofocus placeholder="Barkod...">
+          <input type="text" id="barcode-input" class="form-control" placeholder="Barkod...">
           <button type="button" class="btn btn-outline-primary" id="camera-scan-btn">
             <i class="bi bi-camera-fill"></i> Kamera ilə skan et
           </button>
         </div>
         <div id="scan-error" class="text-danger mt-2"></div>
-      </div>
-      <div class="card p-3 mb-3">
-        <label class="form-label">Və ya ad üzrə axtar</label>
-        <input type="text" id="name-search" class="form-control" placeholder="Mal adı...">
-        <div id="search-results" class="list-group mt-2"></div>
       </div>
       <% if (quickProducts && quickProducts.length) { %>
       <div class="card p-3">

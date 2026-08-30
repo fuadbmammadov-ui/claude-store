@@ -241,7 +241,7 @@ async function submitCheckout() {
     document.getElementById('sale-note').value = '';
     renderCart();
     window.open('/pos/receipt/' + data.saleId, '_blank');
-    barcodeInput.focus();
+    nameSearch.focus();
   } catch (err) {
     document.getElementById('pay-error').textContent = 'Şəbəkə xətası';
   }

@@ -20,7 +20,7 @@
     <div class="col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Xərclər (bugün)</div><div class="fw-bold text-danger"><%= money(totalExpensesToday) %> ₼</div></div></div>
   </div>
 
-  <h5>Satışlar</h5>
+  <h5>Satışlar (çeklər) — məbləğə klikləyin, məhsulları görün</h5>
   <table class="table table-sm bg-white">
     <thead><tr><th>Vaxt</th><th>Satıcı</th><th>Müştəri</th><th>Növ</th><th>Məbləğ</th></tr></thead>
     <tbody>
@@ -30,7 +30,31 @@
         <td><%= s.cashier.fullName %></td>
         <td><%= s.customer ? s.customer.name : '-' %></td>
         <td><%= paymentLabel(s.paymentType) %></td>
-        <td><%= money(s.totalAmount) %> ₼</td>
+        <td>
+          <a href="#" role="button" class="link-primary fw-bold text-decoration-none"
+             data-bs-toggle="collapse" data-bs-target="#sale-items-<%= s.id %>"
+             aria-expanded="false" aria-controls="sale-items-<%= s.id %>">
+            <%= money(s.totalAmount) %> ₼ <i class="bi bi-chevron-down small"></i>
+          </a>
+        </td>
+      </tr>
+      <tr class="collapse" id="sale-items-<%= s.id %>">
+        <td colspan="5" class="bg-light p-0">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Mal</th><th>Miqdar</th><th>Qiymət</th><th>Endirim</th><th>Cəm</th></tr></thead>
+            <tbody>
+              <% s.items.forEach(it => { %>
+              <tr>
+                <td><%= it.productName %></td>
+                <td><%= qty(it.quantity, it.unit) %> <%= it.unit === 'KG' ? 'kq' : 'ədəd' %></td>
+                <td><%= money(it.unitPrice) %> ₼</td>
+                <td><%= money(it.discount) %> ₼</td>
+                <td><%= money(it.lineTotal) %> ₼</td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </td>
       </tr>
       <% }) %>
       <% if (!sales.length) { %>
