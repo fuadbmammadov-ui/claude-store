@@ -46,8 +46,11 @@
       </thead>
       <tbody>
         <% products.forEach(p => { %>
-        <tr class="<%= p.minStock && Number(p.quantity) <= Number(p.minStock) ? 'table-warning' : '' %>">
-          <td><a href="/products/<%= p.id %>"><%= p.name %></a></td>
+        <tr class="<%= p.stockAlert ? 'table-danger' : (p.minStock && Number(p.quantity) <= Number(p.minStock) ? 'table-warning' : '') %>">
+          <td>
+            <a href="/products/<%= p.id %>"><%= p.name %></a>
+            <% if (p.stockAlert) { %><div class="small text-danger fw-bold">⚠ <%= p.daysInStock %> gündür stokdadır</div><% } %>
+          </td>
           <td><%= p.category || '-' %><% if (p.subCategory) { %> / <%= p.subCategory %><% } %></td>
           <td><code><%= p.barcode %></code></td>
           <td><%= p.unit === 'KG' ? 'kq' : 'ədəd' %></td>

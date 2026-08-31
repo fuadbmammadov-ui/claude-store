@@ -3,6 +3,7 @@ const prisma = require('../config/db');
 const { requireRole } = require('../middleware/auth');
 const { generateUniqueBarcode } = require('../utils/barcode');
 const asyncHandler = require('../utils/asyncHandler');
+const { getProductsWithStockAge } = require('../utils/dairyStock');
 
 const router = express.Router();
 
@@ -18,20 +19,16 @@ async function findOrCreateSupplier(tx, name) {
 router.get('/', asyncHandler(async (req, res) => {
   const q = (req.query.q || '').trim();
   const category = (req.query.category || '').trim();
-  const products = await prisma.product.findMany({
-    where: {
-      active: true,
-      ...(category ? { category } : {}),
-      ...(q
-        ? {
-            OR: [
-              { name: { contains: q, mode: 'insensitive' } },
-              { barcode: { contains: q } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: { name: 'asc' },
+  const products = await getProductsWithStockAge(prisma, {
+    ...(category ? { category } : {}),
+    ...(q
+      ? {
+          OR: [
+            { name: { contains: q, mode: 'insensitive' } },
+            { barcode: { contains: q } },
+          ],
+        }
+      : {}),
   });
   const categoryRows = await prisma.product.findMany({
     where: { active: true, category: { not: null } },

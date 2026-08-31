@@ -3,6 +3,7 @@ const prisma = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
 const { sendTelegramMessage } = require('../utils/telegram');
 const { money, qty } = require('../utils/format');
+const { isDairyCategory, getDairyStockAlerts } = require('../utils/dairyStock');
 
 const router = express.Router();
 
@@ -34,13 +35,17 @@ function closeNotificationText(session, totals, closedByName) {
   );
 }
 
-// "Süd məhsulları" kateqoriyası hesabatda hər zaman ən başda gəlsin deyə.
-function isDairyCategory(category) {
-  return (category || '').toLocaleLowerCase('az-AZ').includes('süd məhsul');
-}
-
 function unitLabel(unit) {
   return unit === 'KG' ? 'kq' : 'ədəd';
+}
+
+function dairyAlertText(items) {
+  if (!items.length) return null;
+  const lines = ['⚠️ Diqqət: aşağıdakı süd məhsulları 3+ gündür stokdadır və yoxlanmalıdır:', ''];
+  for (const p of items) {
+    lines.push(`• ${p.name}: ${p.daysInStock} gün (qalıq: ${qty(p.quantity, p.unit)} ${unitLabel(p.unit)})`);
+  }
+  return lines.join('\n');
 }
 
 function chunkText(text, limit) {
@@ -160,6 +165,14 @@ router.post('/open', asyncHandler(async (req, res) => {
       note: req.body.note || null,
     },
   });
+
+  getDairyStockAlerts(prisma)
+    .then((alerts) => {
+      const text = dairyAlertText(alerts);
+      if (text) sendTelegramMessage(text);
+    })
+    .catch((err) => console.error('Süd məhsulları xəbərdarlığı göndərilmədi:', err.message));
+
   res.redirect('/cash-sessions');
 }));
 
