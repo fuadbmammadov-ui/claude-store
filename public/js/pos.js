@@ -320,6 +320,10 @@ function openPayModal(type) {
   modal.show();
 }
 
+document.getElementById('pay-modal').addEventListener('hidden.bs.modal', () => {
+  barcodeInput.focus();
+});
+
 document.getElementById('customer-search').addEventListener('input', function () {
   clearTimeout(this._t);
   const q = this.value.trim();
@@ -413,7 +417,7 @@ document.getElementById('success-print-btn').addEventListener('click', () => {
 });
 
 document.getElementById('success-modal').addEventListener('hidden.bs.modal', () => {
-  searchInput.focus();
+  barcodeInput.focus();
 });
 
 // ---------- Kamera ilə barkod skan ----------
