@@ -10,7 +10,7 @@ router.get('/', asyncHandler(async (req, res) => {
     where: q
       ? { OR: [{ name: { contains: q, mode: 'insensitive' } }, { phone: { contains: q } }] }
       : {},
-    include: { sales: { where: { status: 'DEBT' } } },
+    include: { sales: { where: { status: 'DEBT', voided: false } } },
     orderBy: { name: 'asc' },
   });
 
@@ -42,7 +42,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
   if (!customer) return res.status(404).render('error', { title: 'Tapılmadı', message: 'Müştəri tapılmadı.' });
 
   const outstanding = customer.sales
-    .filter((s) => s.status === 'DEBT')
+    .filter((s) => s.status === 'DEBT' && !s.voided)
     .reduce((sum, s) => sum + (Number(s.totalAmount) - Number(s.paidAmount)), 0);
 
   res.render('customers/show', { customer, outstanding });
@@ -59,7 +59,7 @@ router.post('/:id/payments', asyncHandler(async (req, res) => {
 
   await prisma.$transaction(async (tx) => {
     const openSales = await tx.sale.findMany({
-      where: { customerId, status: 'DEBT' },
+      where: { customerId, status: 'DEBT', voided: false },
       orderBy: { createdAt: 'asc' },
     });
 

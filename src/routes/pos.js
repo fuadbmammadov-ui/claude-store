@@ -1,6 +1,7 @@
 const express = require('express');
 const prisma = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
+const { requireRole } = require('../middleware/auth');
 const { sendTelegramMessage } = require('../utils/telegram');
 const { money, qty } = require('../utils/format');
 
@@ -32,7 +33,7 @@ router.get('/', asyncHandler(async (req, res) => {
 
   const topItems = await prisma.saleItem.groupBy({
     by: ['productId'],
-    where: { sale: { createdAt: { gte: since } } },
+    where: { sale: { createdAt: { gte: since }, voided: false } },
     _sum: { quantity: true },
     orderBy: { _sum: { quantity: 'desc' } },
     take: 12,
@@ -217,6 +218,52 @@ router.get('/receipt/:id', asyncHandler(async (req, res) => {
   });
   if (!sale) return res.status(404).render('error', { title: 'Tapılmadı', message: 'Satış tapılmadı.' });
   res.render('pos/receipt', { sale });
+}));
+
+router.post('/:id/void', requireRole('ADMIN'), asyncHandler(async (req, res) => {
+  const id = Number(req.params.id);
+  const sale = await prisma.sale.findUnique({
+    where: { id },
+    include: { items: true, debtPayments: true },
+  });
+  if (!sale) return res.status(404).render('error', { title: 'Tapılmadı', message: 'Satış tapılmadı.' });
+  if (sale.voided) {
+    return res.status(400).render('error', { title: 'Xəta', message: 'Bu satış artıq ləğv edilib.' });
+  }
+  if (sale.debtPayments.length > 0) {
+    return res.status(400).render('error', {
+      title: 'Xəta',
+      message: 'Bu satışa görə artıq borc ödənişi qeydə alınıb, ona görə ləğv edilə bilmir.',
+    });
+  }
+
+  const reason = (req.body.reason || '').trim() || null;
+
+  await prisma.$transaction(async (tx) => {
+    for (const item of sale.items) {
+      await tx.product.update({
+        where: { id: item.productId },
+        data: { quantity: { increment: Number(item.quantity) } },
+      });
+    }
+    await tx.sale.update({
+      where: { id },
+      data: {
+        voided: true,
+        voidedAt: new Date(),
+        voidedById: req.session.user.id,
+        voidReason: reason,
+      },
+    });
+  });
+
+  sendTelegramMessage(
+    `↩️ Satış #${sale.id} ləğv edildi\n` +
+    `Ləğv edən: ${req.session.user.fullName}\n` +
+    `Məbləğ: ${money(sale.totalAmount)} ₼${reason ? `\nSəbəb: ${reason}` : ''}`
+  );
+
+  res.redirect(req.get('Referrer') || '/today-sales');
 }));
 
 module.exports = router;

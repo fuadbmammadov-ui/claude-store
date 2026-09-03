@@ -22,11 +22,11 @@ router.get('/', asyncHandler(async (req, res) => {
   const monthTo = new Date(Date.UTC(year, month, 1));
 
   const [cashSales, cardSales, transferSales, debtSales, saleItemsToday, openSession, lowStock, dairyAlerts] = await Promise.all([
-    prisma.sale.aggregate({ _sum: { paidAmount: true }, _count: true, where: { paymentType: 'CASH', createdAt: { gte: from } } }),
-    prisma.sale.aggregate({ _sum: { paidAmount: true }, _count: true, where: { paymentType: 'CARD', createdAt: { gte: from } } }),
-    prisma.sale.aggregate({ _sum: { paidAmount: true }, _count: true, where: { paymentType: 'TRANSFER', createdAt: { gte: from } } }),
-    prisma.sale.aggregate({ _sum: { totalAmount: true }, _count: true, where: { paymentType: 'DEBT', createdAt: { gte: from } } }),
-    prisma.saleItem.findMany({ where: { sale: { createdAt: { gte: from } } } }),
+    prisma.sale.aggregate({ _sum: { paidAmount: true }, _count: true, where: { paymentType: 'CASH', createdAt: { gte: from }, voided: false } }),
+    prisma.sale.aggregate({ _sum: { paidAmount: true }, _count: true, where: { paymentType: 'CARD', createdAt: { gte: from }, voided: false } }),
+    prisma.sale.aggregate({ _sum: { paidAmount: true }, _count: true, where: { paymentType: 'TRANSFER', createdAt: { gte: from }, voided: false } }),
+    prisma.sale.aggregate({ _sum: { totalAmount: true }, _count: true, where: { paymentType: 'DEBT', createdAt: { gte: from }, voided: false } }),
+    prisma.saleItem.findMany({ where: { sale: { createdAt: { gte: from }, voided: false } } }),
     prisma.cashSession.findFirst({ where: { closedAt: null } }),
     prisma.product.findMany({ where: { active: true, minStock: { not: null } } }),
     getDairyStockAlerts(prisma),
@@ -41,7 +41,7 @@ router.get('/', asyncHandler(async (req, res) => {
 
   // --- selected month KPIs ---
   const monthSaleItems = await prisma.saleItem.findMany({
-    where: { sale: { createdAt: { gte: monthFrom, lt: monthTo } } },
+    where: { sale: { createdAt: { gte: monthFrom, lt: monthTo }, voided: false } },
   });
   const { total: monthExpenseTotal } = await getMonthlyExpenseBreakdown(prisma, year, month);
 
@@ -102,11 +102,11 @@ router.get('/today-sales', requireRole('ADMIN'), asyncHandler(async (req, res) =
 
   const sales = await prisma.sale.findMany({
     where: { createdAt: { gte: from }, ...(type ? { paymentType: type } : {}) },
-    include: { items: true, cashier: true, customer: true },
+    include: { items: true, cashier: true, customer: true, voidedBy: true },
     orderBy: { createdAt: 'desc' },
   });
 
-  const total = sales.reduce((s, x) => s + Number(x.totalAmount), 0);
+  const total = sales.filter((x) => !x.voided).reduce((s, x) => s + Number(x.totalAmount), 0);
 
   res.render('today-sales', { sales, type, total });
 }));

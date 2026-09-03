@@ -25,14 +25,15 @@
 
   <div class="accordion" id="sales-accordion">
     <% sales.forEach((s) => { %>
-    <div class="accordion-item">
+    <div class="accordion-item <%= s.voided ? 'opacity-50' : '' %>">
       <h2 class="accordion-header">
         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sale-<%= s.id %>">
           <span class="me-3 text-muted">#<%= s.id %></span>
           <span class="me-3"><%= new Date(s.createdAt).toLocaleTimeString('az-AZ') %></span>
           <span class="me-3"><%= s.cashier.fullName %></span>
           <% if (s.customer) { %><span class="me-3 text-muted"><%= s.customer.name %></span><% } %>
-          <span class="ms-auto fw-bold me-3"><%= money(s.totalAmount) %> ₼</span>
+          <% if (s.voided) { %><span class="badge bg-danger me-3">Ləğv edilib</span><% } %>
+          <span class="ms-auto fw-bold me-3 <%= s.voided ? 'text-decoration-line-through text-muted' : '' %>"><%= money(s.totalAmount) %> ₼</span>
         </button>
       </h2>
       <div id="sale-<%= s.id %>" class="accordion-collapse collapse" data-bs-parent="#sales-accordion">
@@ -52,6 +53,18 @@
             </tbody>
           </table>
           <a href="/pos/receipt/<%= s.id %>" target="_blank" class="btn btn-sm btn-outline-secondary">Qəbzi çap et</a>
+          <% if (s.voided) { %>
+          <div class="text-danger small mt-2">
+            Ləğv edən: <%= s.voidedBy ? s.voidedBy.fullName : '-' %>, <%= new Date(s.voidedAt).toLocaleString('az-AZ') %>
+            <% if (s.voidReason) { %><br>Səbəb: <%= s.voidReason %><% } %>
+          </div>
+          <% } else { %>
+          <form action="/pos/<%= s.id %>/void" method="post" class="d-inline-flex gap-2 mt-2"
+                onsubmit="return confirm('Bu satış ləğv edilsin? Mal stoku geri qaytarılacaq. Bu əməliyyat geri alına bilməz.');">
+            <input type="text" name="reason" class="form-control form-control-sm" placeholder="Səbəb (könüllü)" style="width: 220px;">
+            <button type="submit" class="btn btn-sm btn-outline-danger">Satışı ləğv et</button>
+          </form>
+          <% } %>
         </div>
       </div>
     </div>

@@ -42,12 +42,13 @@ model User {
   role             Role              @default(CASHIER)
   active           Boolean           @default(true)
   createdAt        DateTime          @default(now())
-  sales            Sale[]
+  sales            Sale[]            @relation("SaleCashier")
   stockReceipts    StockReceipt[]
   cashSessions     CashSession[]
   debtPayments     DebtPayment[]
   supplierPayments SupplierPayment[]
   expenses         Expense[]
+  voidedSales      Sale[]            @relation("SaleVoidedBy")
 }
 
 model Product {
@@ -139,7 +140,7 @@ model Sale {
   id           Int           @id @default(autoincrement())
   customer     Customer?     @relation(fields: [customerId], references: [id])
   customerId   Int?
-  cashier      User          @relation(fields: [cashierId], references: [id])
+  cashier      User          @relation("SaleCashier", fields: [cashierId], references: [id])
   cashierId    Int
   paymentType  PaymentType
   totalAmount  Decimal       @db.Decimal(12, 2)
@@ -147,6 +148,11 @@ model Sale {
   status       SaleStatus
   note         String?
   createdAt    DateTime      @default(now())
+  voided       Boolean       @default(false)
+  voidedAt     DateTime?
+  voidReason   String?
+  voidedBy     User?         @relation("SaleVoidedBy", fields: [voidedById], references: [id])
+  voidedById   Int?
   items        SaleItem[]
   debtPayments DebtPayment[]
 }

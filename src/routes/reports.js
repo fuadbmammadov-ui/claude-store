@@ -33,7 +33,7 @@ router.get('/daily', asyncHandler(async (req, res) => {
   to.setHours(23, 59, 59, 999);
 
   const sales = await prisma.sale.findMany({
-    where: { createdAt: { gte: from, lte: to } },
+    where: { createdAt: { gte: from, lte: to }, voided: false },
     include: { items: true, cashier: true, customer: true },
     orderBy: { createdAt: 'asc' },
   });
@@ -76,8 +76,8 @@ router.get('/monthly', asyncHandler(async (req, res) => {
   const { year, month, from, to, daysInMonth } = monthRange(req);
 
   const [saleItems, sales, { total: expenseTotal }, supplierDebtRows, activeProducts] = await Promise.all([
-    prisma.saleItem.findMany({ where: { sale: { createdAt: { gte: from, lt: to } } } }),
-    prisma.sale.findMany({ where: { createdAt: { gte: from, lt: to } } }),
+    prisma.saleItem.findMany({ where: { sale: { createdAt: { gte: from, lt: to }, voided: false } } }),
+    prisma.sale.findMany({ where: { createdAt: { gte: from, lt: to }, voided: false } }),
     getMonthlyExpenseBreakdown(prisma, year, month),
     prisma.stockReceipt.findMany({ where: { status: 'DEBT' }, select: { totalAmount: true, paidAmount: true } }),
     prisma.product.findMany({ where: { active: true }, select: { quantity: true, purchasePrice: true } }),
@@ -133,7 +133,7 @@ router.get('/trends', asyncHandler(async (req, res) => {
   dayFrom.setDate(dayFrom.getDate() - (DAYS - 1));
 
   const dailySales = await prisma.sale.findMany({
-    where: { createdAt: { gte: dayFrom } },
+    where: { createdAt: { gte: dayFrom }, voided: false },
     select: { totalAmount: true, createdAt: true },
   });
 
@@ -155,7 +155,7 @@ router.get('/trends', asyncHandler(async (req, res) => {
   const monthNames = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'İyn', 'İyl', 'Avq', 'Sen', 'Okt', 'Noy', 'Dek'];
   const monthFrom = new Date(Date.UTC(now.getFullYear(), now.getMonth() - (MONTHS - 1), 1));
   const monthlySales = await prisma.sale.findMany({
-    where: { createdAt: { gte: monthFrom } },
+    where: { createdAt: { gte: monthFrom }, voided: false },
     select: { totalAmount: true, createdAt: true },
   });
 
@@ -181,7 +181,7 @@ router.get('/trends', asyncHandler(async (req, res) => {
   const daysElapsed = now.getDate();
   const monthToDateAgg = await prisma.sale.aggregate({
     _sum: { totalAmount: true },
-    where: { createdAt: { gte: monthStart } },
+    where: { createdAt: { gte: monthStart }, voided: false },
   });
   const monthToDateRevenue = Number(monthToDateAgg._sum.totalAmount || 0);
   const dailyRunRate = daysElapsed > 0 ? monthToDateRevenue / daysElapsed : 0;
@@ -198,7 +198,7 @@ router.get('/trends', asyncHandler(async (req, res) => {
     const mFrom = new Date(Date.UTC(y, m - 1, 1));
     const mTo = new Date(Date.UTC(y, m, 1));
     // eslint-disable-next-line no-await-in-loop
-    const items = await prisma.saleItem.findMany({ where: { sale: { createdAt: { gte: mFrom, lt: mTo } } } });
+    const items = await prisma.saleItem.findMany({ where: { sale: { createdAt: { gte: mFrom, lt: mTo }, voided: false } } });
     const rev = items.reduce((s, it) => s + Number(it.lineTotal), 0);
     const cost = items.reduce((s, it) => s + Number(it.purchasePrice) * Number(it.quantity), 0);
     // eslint-disable-next-line no-await-in-loop
@@ -213,10 +213,10 @@ router.get('/trends', asyncHandler(async (req, res) => {
 
   // Ödəniş növü üzrə paylanma - cari ay
   const [cashAgg, cardAgg, transferAgg, debtAgg] = await Promise.all([
-    prisma.sale.aggregate({ _sum: { paidAmount: true }, where: { paymentType: 'CASH', createdAt: { gte: monthStart } } }),
-    prisma.sale.aggregate({ _sum: { paidAmount: true }, where: { paymentType: 'CARD', createdAt: { gte: monthStart } } }),
-    prisma.sale.aggregate({ _sum: { paidAmount: true }, where: { paymentType: 'TRANSFER', createdAt: { gte: monthStart } } }),
-    prisma.sale.aggregate({ _sum: { totalAmount: true }, where: { paymentType: 'DEBT', createdAt: { gte: monthStart } } }),
+    prisma.sale.aggregate({ _sum: { paidAmount: true }, where: { paymentType: 'CASH', createdAt: { gte: monthStart }, voided: false } }),
+    prisma.sale.aggregate({ _sum: { paidAmount: true }, where: { paymentType: 'CARD', createdAt: { gte: monthStart }, voided: false } }),
+    prisma.sale.aggregate({ _sum: { paidAmount: true }, where: { paymentType: 'TRANSFER', createdAt: { gte: monthStart }, voided: false } }),
+    prisma.sale.aggregate({ _sum: { totalAmount: true }, where: { paymentType: 'DEBT', createdAt: { gte: monthStart }, voided: false } }),
   ]);
   const paymentBreakdown = [
     { label: 'Nağd', value: Number(cashAgg._sum.paidAmount || 0) },
@@ -227,7 +227,7 @@ router.get('/trends', asyncHandler(async (req, res) => {
 
   // Ən çox satılan mallar (məbləğ üzrə) - cari ay, top 5
   const monthItems = await prisma.saleItem.findMany({
-    where: { sale: { createdAt: { gte: monthStart } } },
+    where: { sale: { createdAt: { gte: monthStart }, voided: false } },
   });
   const byProduct = {};
   monthItems.forEach((it) => {
@@ -251,7 +251,7 @@ router.get('/trends', asyncHandler(async (req, res) => {
 router.get('/products', asyncHandler(async (req, res) => {
   const { year, month, from, to } = monthRange(req);
 
-  const saleItems = await prisma.saleItem.findMany({ where: { sale: { createdAt: { gte: from, lt: to } } } });
+  const saleItems = await prisma.saleItem.findMany({ where: { sale: { createdAt: { gte: from, lt: to }, voided: false } } });
 
   const byProduct = {};
   saleItems.forEach((it) => {
@@ -274,7 +274,7 @@ router.get('/categories', asyncHandler(async (req, res) => {
   const { year, month, from, to } = monthRange(req);
 
   const saleItems = await prisma.saleItem.findMany({
-    where: { sale: { createdAt: { gte: from, lt: to } } },
+    where: { sale: { createdAt: { gte: from, lt: to }, voided: false } },
     include: { product: { select: { category: true } } },
   });
 

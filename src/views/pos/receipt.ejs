@@ -36,6 +36,9 @@
   <% if (sale.status === 'DEBT') { %>
   <p class="text-center text-danger">BORC YAZILIB</p>
   <% } %>
+  <% if (sale.voided) { %>
+  <p class="text-center text-danger fw-bold" style="font-size: 1.3em; border: 2px solid; padding: 4px;">LƏĞV EDİLİB</p>
+  <% } %>
   <p class="text-center mt-4">Təşəkkür edirik!</p>
 </div>
 <%- include('../partials/foot') %>
