@@ -1,64 +1,222 @@
+const PRODUCTS = window.POS_PRODUCTS || [];
+const QUICK_IDS = window.POS_QUICK_IDS || [];
+
 let cart = [];
+let currentCategory = 'all';
 let selectedCustomerId = null;
 let currentPaymentType = null;
+let lastSaleId = null;
 
-const barcodeInput = document.getElementById('barcode-input');
-const nameSearch = document.getElementById('name-search');
-const searchResults = document.getElementById('search-results');
-const cartBody = document.getElementById('cart-body');
-const cartTotalEl = document.getElementById('cart-total');
-const scanError = document.getElementById('scan-error');
+const searchInput = document.getElementById('pos-search');
+const barcodeInput = document.getElementById('pos-barcode');
+const scanError = document.getElementById('pos-scan-error');
+const categoriesBox = document.getElementById('pos-categories');
+const grid = document.getElementById('pos-products-grid');
+const currentCategoryEl = document.getElementById('pos-current-category');
+const productsCountEl = document.getElementById('pos-products-count');
+const cartItemsBox = document.getElementById('pos-cart-items');
+const cartCountEl = document.getElementById('pos-cart-count');
+const totalAmountEl = document.getElementById('pos-total-amount');
+
+const CATEGORY_EMOJI = {
+  'Bal və mürəbbə': '🍯',
+  'Konserv': '🥫',
+  'Süd': '🥛',
+  'Süd məhsulları': '🧀',
+  'Toyuq': '🍗',
+  'Turşu və konserv': '🥒',
+  'Un məhsulları': '🍞',
+  'Un məmulatları': '🥮',
+  'Yumurta': '🥚',
+  'Şirniyyat': '🍬',
+};
+
+function categoryEmoji(cat) {
+  return CATEGORY_EMOJI[cat] || '📦';
+}
 
 function money(n) {
   return Number(n || 0).toLocaleString('az-AZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function addToCart(product) {
+function qtyLabel(unit) {
+  return unit === 'KG' ? 'kq' : 'ədəd';
+}
+
+function findProduct(id) {
+  return PRODUCTS.find((p) => p.id === Number(id));
+}
+
+function findProductByBarcode(code) {
+  return PRODUCTS.find((p) => p.barcode === code);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('pos-toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+// ---------- RENDER: favorites ----------
+function renderFavorites() {
+  const box = document.getElementById('pos-favorites');
+  if (!box) return;
+  const favs = QUICK_IDS.map((id) => findProduct(id)).filter(Boolean);
+  box.innerHTML = favs.map((p) => {
+    const out = p.quantity <= 0;
+    return `
+      <div class="pos-fav-card ${out ? 'disabled' : ''}" onclick="addToCart(${p.id})">
+        <div class="emoji">${categoryEmoji(p.category)}</div>
+        <div class="name">${escapeHtml(p.name)}</div>
+        <div class="price">${money(p.salePrice)} ₼</div>
+      </div>`;
+  }).join('');
+}
+
+// ---------- RENDER: product grid ----------
+function renderProducts() {
+  const search = searchInput.value.trim().toLowerCase();
+  let filtered = PRODUCTS;
+
+  if (currentCategory !== 'all') {
+    filtered = filtered.filter((p) => p.category === currentCategory);
+  }
+  if (search) {
+    filtered = filtered.filter((p) => p.name.toLowerCase().includes(search) || p.barcode.includes(search));
+  }
+
+  productsCountEl.textContent = filtered.length + ' məhsul';
+  currentCategoryEl.textContent = currentCategory === 'all' ? 'Bütün məhsullar' : currentCategory;
+
+  grid.innerHTML = filtered.map((p) => {
+    const out = p.quantity <= 0;
+    const low = !out && p.minStock !== null && p.quantity <= p.minStock;
+    let badgeClass = '';
+    let badgeText = `${qty(p.quantity, p.unit)} ${qtyLabel(p.unit)}`;
+    if (out) { badgeClass = 'out'; badgeText = 'Bitib'; }
+    else if (low) { badgeClass = 'low'; }
+
+    return `
+      <div class="pos-product-card ${out ? 'out-of-stock' : ''}" onclick="addToCart(${p.id})">
+        <div class="pos-product-img">${categoryEmoji(p.category)}</div>
+        <div class="pos-product-name">${escapeHtml(p.name)}</div>
+        <div class="pos-product-footer">
+          <span class="pos-product-price">${money(p.salePrice)} ₼</span>
+          <span class="pos-stock-badge ${badgeClass}">${badgeText}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function qty(value, unit) {
+  const n = Number(value || 0);
+  if (unit === 'KG') return n.toLocaleString('az-AZ', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+  return n.toLocaleString('az-AZ', { maximumFractionDigits: 3 });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// ---------- CART ----------
+function addToCart(id) {
+  const product = findProduct(id);
+  if (!product || product.quantity <= 0) return;
+
   const existing = cart.find((c) => c.productId === product.id);
   if (existing) {
-    existing.quantity += 1;
+    if (product.unit !== 'KG') {
+      if (existing.quantity < product.maxQuantity) {
+        existing.quantity += 1;
+        showToast(`${product.name} +1`);
+      } else {
+        showToast('Stok kifayət etmir');
+        return;
+      }
+    } else {
+      showToast(`${product.name} artıq səbətdədir`);
+    }
   } else {
     cart.push({
       productId: product.id,
       name: product.name,
+      category: product.category,
       unit: product.unit,
       unitPrice: Number(product.salePrice),
       discount: 0,
       quantity: product.unit === 'KG' ? 0 : 1,
       maxQuantity: Number(product.quantity),
+      editOpen: false,
     });
+    showToast(`${product.name} əlavə olundu`);
   }
   renderCart();
 }
 
 function renderCart() {
-  cartBody.innerHTML = '';
+  cartCountEl.textContent = cart.length;
+
+  if (cart.length === 0) {
+    cartItemsBox.innerHTML = `
+      <div class="pos-empty-cart" id="pos-empty-cart">
+        <div class="icon">🛒</div>
+        <p>Səbət boşdur</p>
+        <p style="font-size:12px">Məhsul seçərək satışa başlayın</p>
+      </div>`;
+    totalAmountEl.textContent = '0.00 ₼';
+    return;
+  }
+
   let total = 0;
-  cart.forEach((item, idx) => {
+  cartItemsBox.innerHTML = cart.map((item, idx) => {
     const lineTotal = Math.max(0, item.quantity * item.unitPrice - (item.discount || 0));
     total += lineTotal;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${item.name}</td>
-      <td style="width: 100px;">
-        <input type="number" step="${item.unit === 'KG' ? '0.001' : '1'}" min="0" value="${item.quantity}"
-          class="form-control form-control-sm" onchange="updateQty(${idx}, this.value)">
-        <small class="text-muted">${item.unit === 'KG' ? 'kq' : 'ədəd'}</small>
-      </td>
-      <td style="width: 90px;">
-        <input type="number" step="0.01" min="0" value="${item.unitPrice}"
-          class="form-control form-control-sm" onchange="updatePrice(${idx}, this.value)">
-      </td>
-      <td style="width: 90px;">
-        <input type="number" step="0.01" min="0" value="${item.discount || 0}"
-          class="form-control form-control-sm" onchange="updateDiscount(${idx}, this.value)">
-      </td>
-      <td>${money(lineTotal)}</td>
-      <td><button class="btn btn-sm btn-outline-danger" onclick="removeItem(${idx})">×</button></td>
-    `;
-    cartBody.appendChild(tr);
-  });
-  cartTotalEl.textContent = money(total);
+
+    const qtyControl = item.unit === 'KG'
+      ? `<input type="number" step="0.001" min="0" class="pos-qty-kg-input" value="${item.quantity}" onchange="updateQty(${idx}, this.value)">`
+      : `<div class="pos-qty-control">
+          <button class="pos-qty-btn" onclick="changeQty(${idx}, -1)">−</button>
+          <span class="pos-qty-value">${item.quantity}</span>
+          <button class="pos-qty-btn" onclick="changeQty(${idx}, 1)">+</button>
+        </div>`;
+
+    return `
+      <div class="pos-cart-item">
+        <div class="pos-cart-item-row">
+          <div class="pos-cart-item-img">${categoryEmoji(item.category)}</div>
+          <div class="pos-cart-item-info">
+            <div class="pos-cart-item-name">${escapeHtml(item.name)}</div>
+            <div class="pos-cart-item-price">${money(item.unitPrice)} ₼ × ${qty(item.quantity, item.unit)} = ${money(lineTotal)} ₼</div>
+          </div>
+          ${qtyControl}
+          <button class="pos-cart-edit-toggle" onclick="toggleEdit(${idx})" title="Qiymət/endirim">✎</button>
+          <button class="pos-cart-remove" onclick="removeItem(${idx})">🗑</button>
+        </div>
+        <div class="pos-cart-edit-row ${item.editOpen ? 'show' : ''}" id="edit-row-${idx}">
+          <div class="pos-cart-edit-field">
+            <label>Qiymət (₼)</label>
+            <input type="number" step="0.01" min="0" value="${item.unitPrice}" onchange="updatePrice(${idx}, this.value)">
+          </div>
+          <div class="pos-cart-edit-field">
+            <label>Endirim (₼)</label>
+            <input type="number" step="0.01" min="0" value="${item.discount || 0}" onchange="updateDiscount(${idx}, this.value)">
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  totalAmountEl.textContent = money(total) + ' ₼';
+}
+
+function changeQty(idx, delta) {
+  const item = cart[idx];
+  const newQty = item.quantity + delta;
+  if (newQty <= 0) { removeItem(idx); return; }
+  if (newQty > item.maxQuantity) { showToast('Stok kifayət etmir'); return; }
+  item.quantity = newQty;
+  renderCart();
 }
 
 function updateQty(idx, value) {
@@ -79,22 +237,48 @@ function updateDiscount(idx, value) {
   renderCart();
 }
 
+function toggleEdit(idx) {
+  cart[idx].editOpen = !cart[idx].editOpen;
+  renderCart();
+}
+
 function removeItem(idx) {
   cart.splice(idx, 1);
   renderCart();
 }
 
-async function lookupAndAddToCart(code) {
+// ---------- Category & search ----------
+categoriesBox.addEventListener('click', (e) => {
+  const btn = e.target.closest('.pos-cat-btn');
+  if (!btn) return;
+  categoriesBox.querySelectorAll('.pos-cat-btn').forEach((b) => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentCategory = btn.dataset.cat;
+  renderProducts();
+});
+
+searchInput.addEventListener('input', renderProducts);
+
+// ---------- Barcode ----------
+async function lookupAndAddByBarcode(code) {
   scanError.textContent = '';
-  if (!code) return;
+  if (!code) return false;
+  const local = findProductByBarcode(code);
+  if (local) {
+    if (local.quantity <= 0) { scanError.textContent = `${local.name} anbarda yoxdur`; return false; }
+    addToCart(local.id);
+    return true;
+  }
   try {
     const resp = await fetch('/pos/lookup?barcode=' + encodeURIComponent(code));
     const data = await resp.json();
-    if (!resp.ok) {
-      scanError.textContent = data.error || 'Xəta';
-      return false;
-    }
-    addToCart(data);
+    if (!resp.ok) { scanError.textContent = data.error || 'Mal tapılmadı'; return false; }
+    PRODUCTS.push({
+      id: data.id, name: data.name, barcode: data.barcode, category: data.category || 'Digər',
+      unit: data.unit, salePrice: Number(data.salePrice), quantity: Number(data.quantity),
+      minStock: data.minStock !== null && data.minStock !== undefined ? Number(data.minStock) : null,
+    });
+    addToCart(data.id);
     return true;
   } catch (err) {
     scanError.textContent = 'Şəbəkə xətası';
@@ -106,52 +290,13 @@ barcodeInput.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
   const code = barcodeInput.value.trim();
   barcodeInput.value = '';
-  lookupAndAddToCart(code);
+  lookupAndAddByBarcode(code);
 });
 
-let searchTimer;
-nameSearch.addEventListener('input', () => {
-  clearTimeout(searchTimer);
-  const q = nameSearch.value.trim();
-  if (!q) {
-    searchResults.innerHTML = '';
-    return;
-  }
-  searchTimer = setTimeout(async () => {
-    const resp = await fetch('/pos/search?q=' + encodeURIComponent(q));
-    const items = await resp.json();
-    searchResults.innerHTML = '';
-    items.forEach((p) => {
-      const a = document.createElement('a');
-      a.href = '#';
-      a.className = 'list-group-item list-group-item-action';
-      a.textContent = `${p.name} — ${money(p.salePrice)} ₼ (qalıq: ${p.quantity})`;
-      a.onclick = (e) => {
-        e.preventDefault();
-        addToCart(p);
-        nameSearch.value = '';
-        searchResults.innerHTML = '';
-      };
-      searchResults.appendChild(a);
-    });
-  }, 250);
-});
-
-document.querySelectorAll('.quick-pick-btn').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    addToCart({
-      id: Number(btn.dataset.id),
-      name: btn.dataset.name,
-      unit: btn.dataset.unit,
-      salePrice: Number(btn.dataset.price),
-      quantity: Number(btn.dataset.qty),
-    });
-  });
-});
-
+// ---------- Payment modal ----------
 function openPayModal(type) {
   if (cart.length === 0 || cart.every((c) => c.quantity <= 0)) {
-    alert('Səbət boşdur');
+    showToast('Səbət boşdur');
     return;
   }
   currentPaymentType = type;
@@ -236,19 +381,43 @@ async function submitCheckout() {
       document.getElementById('pay-error').textContent = data.error || 'Xəta baş verdi';
       return;
     }
-    bootstrap.Modal.getInstance(document.getElementById('pay-modal')).hide();
+
+    // Reflect sold quantities locally so the grid/stock badges stay accurate without a reload.
+    items.forEach((it) => {
+      const p = findProduct(it.productId);
+      if (p) p.quantity = Math.max(0, p.quantity - it.quantity);
+    });
+
     cart = [];
     document.getElementById('sale-note').value = '';
     renderCart();
-    window.open('/pos/receipt/' + data.saleId, '_blank');
-    nameSearch.focus();
+    renderProducts();
+    renderFavorites();
+
+    lastSaleId = data.saleId;
+    document.getElementById('success-receipt-no').textContent = '#' + data.saleId;
+
+    const payModalEl = document.getElementById('pay-modal');
+    payModalEl.addEventListener('hidden.bs.modal', function showSuccess() {
+      payModalEl.removeEventListener('hidden.bs.modal', showSuccess);
+      new bootstrap.Modal(document.getElementById('success-modal')).show();
+    });
+    bootstrap.Modal.getInstance(payModalEl).hide();
   } catch (err) {
     document.getElementById('pay-error').textContent = 'Şəbəkə xətası';
   }
 }
 
-// --- Kamera ilə barkod skan ---
-const cameraScanBtn = document.getElementById('camera-scan-btn');
+document.getElementById('success-print-btn').addEventListener('click', () => {
+  if (lastSaleId) window.open('/pos/receipt/' + lastSaleId, '_blank');
+});
+
+document.getElementById('success-modal').addEventListener('hidden.bs.modal', () => {
+  searchInput.focus();
+});
+
+// ---------- Kamera ilə barkod skan ----------
+const cameraScanBtn = document.getElementById('pos-camera-btn');
 const scanModalEl = document.getElementById('scan-modal');
 const scanVideo = document.getElementById('scan-video');
 const scanModalStatus = document.getElementById('scan-modal-status');
@@ -316,7 +485,7 @@ async function scanFrame() {
       if (code !== lastScannedCode || now - lastScannedAt > 2000) {
         lastScannedCode = code;
         lastScannedAt = now;
-        const ok = await lookupAndAddToCart(code);
+        const ok = await lookupAndAddByBarcode(code);
         if (ok) {
           scanModalLast.style.display = 'block';
           scanModalLast.textContent = 'Əlavə edildi: ' + code;
@@ -342,3 +511,8 @@ function stopCameraScan() {
   }
   scanVideo.srcObject = null;
 }
+
+// ---------- INIT ----------
+renderFavorites();
+renderProducts();
+renderCart();

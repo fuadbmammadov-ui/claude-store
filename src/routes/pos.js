@@ -57,7 +57,27 @@ router.get('/', asyncHandler(async (req, res) => {
     quickProducts = quickProducts.concat(fallback);
   }
 
-  res.render('pos/index', { quickProducts });
+  const allProducts = await prisma.product.findMany({
+    where: { active: true },
+    orderBy: [{ category: 'asc' }, { name: 'asc' }],
+  });
+
+  const categories = [...new Set(allProducts.map((p) => p.category || 'Digər'))].sort((a, b) => a.localeCompare(b, 'az'));
+
+  const products = allProducts.map((p) => ({
+    id: p.id,
+    name: p.name,
+    barcode: p.barcode,
+    category: p.category || 'Digər',
+    unit: p.unit,
+    salePrice: Number(p.salePrice),
+    quantity: Number(p.quantity),
+    minStock: p.minStock !== null ? Number(p.minStock) : null,
+  }));
+
+  const quickIds = new Set(quickProducts.map((p) => p.id));
+
+  res.render('pos/index', { products, categories, quickIds: [...quickIds] });
 }));
 
 router.get('/lookup', asyncHandler(async (req, res) => {

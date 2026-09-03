@@ -1,66 +1,271 @@
 <%- include('../partials/head', { title: 'Satış' }) %>
 <%- include('../partials/nav') %>
-<div class="container-fluid py-4">
-  <div class="row">
-    <div class="col-lg-7">
-      <div class="card p-3 mb-3">
-        <label class="form-label">Ad üzrə axtar</label>
-        <input type="text" id="name-search" class="form-control" autofocus placeholder="Mal adı...">
-        <div id="search-results" class="list-group mt-2"></div>
-      </div>
-      <div class="card p-3 mb-3">
-        <label class="form-label">Və ya barkodu skan edin/daxil edin</label>
-        <div class="input-group">
-          <input type="text" id="barcode-input" class="form-control" placeholder="Barkod...">
-          <button type="button" class="btn btn-outline-primary" id="camera-scan-btn">
-            <i class="bi bi-camera-fill"></i> Kamera ilə skan et
-          </button>
-        </div>
-        <div id="scan-error" class="text-danger mt-2"></div>
-      </div>
-      <% if (quickProducts && quickProducts.length) { %>
-      <div class="card p-3">
-        <label class="form-label mb-2"><i class="bi bi-lightning-charge-fill text-warning"></i> Tez satış — ən çox satılan mallar</label>
-        <div class="quick-pick-grid">
-          <% quickProducts.forEach(p => { %>
-          <button type="button" class="quick-pick-btn"
-            data-id="<%= p.id %>" data-name="<%= p.name %>" data-unit="<%= p.unit %>"
-            data-price="<%= p.salePrice %>" data-qty="<%= p.quantity %>">
-            <span class="quick-pick-name"><%= p.name %></span>
-            <span class="quick-pick-price"><%= money(p.salePrice) %> ₼</span>
-          </button>
-          <% }) %>
-        </div>
-      </div>
-      <% } %>
+
+<style>
+  .pos-app {
+    --pos-primary: #1E3A5F;
+    --pos-primary-dark: #0F2A47;
+    --pos-accent: #22C55E;
+    --pos-accent-dark: #16A34A;
+    --pos-danger: #EF4444;
+    --pos-warning: #F59E0B;
+    --pos-text: #111827;
+    --pos-text-secondary: #6B7280;
+    --pos-bg: #F5F7FA;
+    --pos-surface: #FFFFFF;
+    --pos-border: #E5E7EB;
+    --pos-radius: 14px;
+    --pos-shadow: 0 4px 16px rgba(0,0,0,0.06);
+
+    height: calc(100vh - 56px);
+    background: var(--pos-bg);
+    color: var(--pos-text);
+    display: flex;
+    padding: 16px;
+    gap: 16px;
+    overflow: hidden;
+  }
+  .pos-app * { box-sizing: border-box; }
+
+  /* Left panel */
+  .pos-left {
+    width: 260px;
+    background: var(--pos-surface);
+    border-radius: var(--pos-radius);
+    box-shadow: var(--pos-shadow);
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 14px;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .pos-search-box {
+    display: flex;
+    align-items: center;
+    background: var(--pos-bg);
+    border-radius: 12px;
+    padding: 0 12px;
+    height: 46px;
+    border: 1.5px solid transparent;
+    transition: 0.2s;
+  }
+  .pos-search-box:focus-within { border-color: var(--pos-primary); background: #fff; }
+  .pos-search-box input {
+    flex: 1; border: none; background: transparent; font-size: 14px; outline: none; padding-left: 8px; min-width: 0;
+  }
+  .pos-search-box .icon { color: var(--pos-text-secondary); font-size: 16px; flex-shrink: 0; }
+  .pos-search-box button {
+    border: none; background: transparent; color: var(--pos-primary); font-size: 18px; cursor: pointer; padding: 4px;
+  }
+  .pos-categories { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+  .pos-cat-btn {
+    height: 42px; border-radius: 10px; border: none; background: transparent; font-size: 14px; font-weight: 500;
+    color: var(--pos-text); text-align: left; padding: 0 12px; cursor: pointer; transition: 0.15s; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .pos-cat-btn:hover { background: #F1F5F9; }
+  .pos-cat-btn.active { background: var(--pos-primary); color: white; }
+  .pos-fav-title {
+    font-size: 12px; font-weight: 700; color: var(--pos-text-secondary); margin-top: 4px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .pos-favorites { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; overflow-y: auto; }
+  .pos-fav-card {
+    background: var(--pos-bg); border-radius: 12px; padding: 8px; text-align: center; cursor: pointer;
+    transition: 0.15s; border: 1.5px solid transparent;
+  }
+  .pos-fav-card:active { transform: scale(0.96); }
+  .pos-fav-card:hover { border-color: var(--pos-primary); }
+  .pos-fav-card.disabled { opacity: 0.45; pointer-events: none; }
+  .pos-fav-card .emoji { font-size: 24px; margin-bottom: 2px; }
+  .pos-fav-card .name { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pos-fav-card .price { font-size: 12px; color: var(--pos-accent); font-weight: 700; }
+
+  /* Center panel */
+  .pos-center { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .pos-products-header { display: flex; justify-content: space-between; align-items: center; padding: 0 4px; flex-shrink: 0; }
+  .pos-products-header h2 { font-size: 18px; font-weight: 700; margin: 0; }
+  .pos-products-count { font-size: 13px; color: var(--pos-text-secondary); }
+  .pos-products-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px;
+    overflow-y: auto; padding-bottom: 16px; flex: 1; align-content: start;
+  }
+  .pos-product-card {
+    background: var(--pos-surface); border-radius: var(--pos-radius); box-shadow: var(--pos-shadow); padding: 10px;
+    display: flex; flex-direction: column; cursor: pointer; transition: 0.15s; border: 2px solid transparent; position: relative;
+  }
+  .pos-product-card:active { transform: scale(0.97); }
+  .pos-product-card:hover { border-color: var(--pos-primary); }
+  .pos-product-card.out-of-stock { opacity: 0.5; pointer-events: none; }
+  .pos-product-img {
+    height: 78px; background: linear-gradient(135deg, #E0F2FE, #F0F9FF); border-radius: 10px;
+    display: flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 8px;
+  }
+  .pos-product-name {
+    font-size: 13px; font-weight: 600; line-height: 1.3; margin-bottom: 6px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 34px;
+  }
+  .pos-product-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; gap: 4px; }
+  .pos-product-price { font-size: 15px; font-weight: 700; color: var(--pos-accent); }
+  .pos-stock-badge {
+    font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 20px; background: #DCFCE7; color: #166534;
+    white-space: nowrap;
+  }
+  .pos-stock-badge.low { background: #FEF3C7; color: #92400E; }
+  .pos-stock-badge.out { background: #FEE2E2; color: #991B1B; }
+
+  /* Right panel - cart */
+  .pos-right {
+    width: 340px; background: var(--pos-surface); border-radius: var(--pos-radius); box-shadow: var(--pos-shadow);
+    display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden;
+  }
+  .pos-cart-header {
+    padding: 16px 18px 10px; border-bottom: 1px solid var(--pos-border); display: flex; justify-content: space-between; align-items: center;
+    flex-shrink: 0;
+  }
+  .pos-cart-header h2 { font-size: 16px; font-weight: 700; margin: 0; }
+  .pos-cart-count { background: var(--pos-primary); color: white; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+  .pos-cart-items { flex: 1; overflow-y: auto; padding: 10px 14px; display: flex; flex-direction: column; gap: 10px; }
+  .pos-cart-item { background: var(--pos-bg); border-radius: 12px; padding: 8px 10px; }
+  .pos-cart-item-row { display: flex; align-items: center; gap: 10px; }
+  .pos-cart-item-img {
+    width: 40px; height: 40px; background: #E0F2FE; border-radius: 9px; display: flex; align-items: center;
+    justify-content: center; font-size: 20px; flex-shrink: 0;
+  }
+  .pos-cart-item-info { flex: 1; min-width: 0; }
+  .pos-cart-item-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pos-cart-item-price { font-size: 12px; color: var(--pos-text-secondary); }
+  .pos-qty-control { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .pos-qty-btn {
+    width: 30px; height: 30px; border-radius: 8px; border: none; background: white; font-size: 16px; font-weight: 600;
+    color: var(--pos-text); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center;
+  }
+  .pos-qty-btn:active { background: #E5E7EB; }
+  .pos-qty-value { font-size: 13px; font-weight: 700; min-width: 22px; text-align: center; }
+  .pos-qty-kg-input {
+    width: 62px; height: 30px; border-radius: 8px; border: 1px solid var(--pos-border); text-align: center; font-size: 12px; font-weight: 600;
+  }
+  .pos-cart-remove { width: 28px; height: 28px; border: none; background: transparent; color: var(--pos-danger); font-size: 15px; cursor: pointer; border-radius: 7px; flex-shrink: 0; }
+  .pos-cart-remove:active { background: #FEE2E2; }
+  .pos-cart-edit-toggle { width: 26px; height: 26px; border: none; background: transparent; color: var(--pos-text-secondary); font-size: 13px; cursor: pointer; border-radius: 7px; flex-shrink: 0; }
+  .pos-cart-edit-toggle:hover { background: #E5E7EB; }
+  .pos-cart-edit-row { display: none; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--pos-border); }
+  .pos-cart-edit-row.show { display: flex; }
+  .pos-cart-edit-row label { font-size: 10px; color: var(--pos-text-secondary); display: block; margin-bottom: 2px; }
+  .pos-cart-edit-row input { width: 100%; height: 28px; border-radius: 7px; border: 1px solid var(--pos-border); font-size: 12px; text-align: center; }
+  .pos-cart-edit-field { flex: 1; }
+
+  .pos-empty-cart {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: var(--pos-text-secondary); gap: 6px; padding: 30px; text-align: center;
+  }
+  .pos-empty-cart .icon { font-size: 42px; opacity: 0.4; }
+  .pos-empty-cart p { font-size: 14px; margin: 0; }
+
+  .pos-cart-footer { padding: 12px 16px 16px; border-top: 1px solid var(--pos-border); background: #FAFBFC; flex-shrink: 0; }
+  .pos-note-input {
+    width: 100%; height: 36px; border-radius: 8px; border: 1px solid var(--pos-border); padding: 0 10px; font-size: 12.5px; margin-bottom: 10px;
+  }
+  .pos-total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .pos-total-label { font-size: 14px; color: var(--pos-text-secondary); }
+  .pos-total-amount { font-size: 24px; font-weight: 800; color: var(--pos-accent); }
+  .pos-payment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .pos-pay-btn {
+    height: 44px; border-radius: 12px; border: 1.5px solid var(--pos-border); background: white; font-size: 13px;
+    font-weight: 600; cursor: pointer; transition: 0.15s;
+  }
+  .pos-pay-btn:hover { border-color: var(--pos-primary); color: var(--pos-primary); }
+
+  /* Modal reskin (keeps Bootstrap modal behaviour, just restyled) */
+  .pos-app ~ .modal .modal-content { border-radius: 18px; border: none; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+  .pos-success-icon {
+    width: 72px; height: 72px; background: #DCFCE7; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-size: 34px; margin: 8px auto 14px; color: #166534;
+  }
+
+  /* Toast */
+  .pos-toast {
+    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--pos-primary);
+    color: white; padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 14px; z-index: 2000; opacity: 0;
+    transition: 0.3s; box-shadow: 0 8px 24px rgba(0,0,0,0.2); pointer-events: none;
+  }
+  .pos-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  @media (max-width: 1100px) {
+    .pos-left { width: 210px; }
+    .pos-right { width: 300px; }
+  }
+</style>
+
+<div class="pos-app">
+  <!-- LEFT PANEL -->
+  <div class="pos-left">
+    <div class="pos-search-box">
+      <span class="icon">🔍</span>
+      <input type="text" id="pos-search" placeholder="Ad ilə axtar...">
+    </div>
+    <div class="pos-search-box">
+      <span class="icon">🔢</span>
+      <input type="text" id="pos-barcode" placeholder="Barkod daxil edin...">
+      <button type="button" id="pos-camera-btn" title="Kamera ilə skan et">📷</button>
+    </div>
+    <div id="pos-scan-error" class="text-danger" style="font-size:12px;"></div>
+
+    <div class="pos-categories" id="pos-categories">
+      <button class="pos-cat-btn active" data-cat="all">Bütün məhsullar</button>
+      <% categories.forEach(cat => { %>
+      <button class="pos-cat-btn" data-cat="<%= cat %>"><%= cat %></button>
+      <% }) %>
     </div>
 
-    <div class="col-lg-5">
-      <div class="card p-3">
-        <h5>Səbət</h5>
-        <div class="table-responsive">
-          <table class="table">
-            <thead><tr><th>Mal</th><th>Miqdar</th><th>Qiymət</th><th>Endirim</th><th>Cəm</th><th></th></tr></thead>
-            <tbody id="cart-body"></tbody>
-          </table>
-        </div>
-        <h4 class="text-end">Yekun: <span id="cart-total">0.00</span> ₼</h4>
-        <div class="mb-3">
-          <label class="form-label">Qeyd (könüllü)</label>
-          <input type="text" id="sale-note" class="form-control" placeholder="Məs: müştəri qeydi...">
-        </div>
-        <div class="d-grid gap-2">
-          <button class="btn btn-success btn-lg" onclick="openPayModal('CASH')"><i class="bi bi-cash-stack"></i> Nağd ödə</button>
-          <button class="btn btn-primary btn-lg" onclick="openPayModal('CARD')"><i class="bi bi-credit-card"></i> Kartla ödə</button>
-          <button class="btn btn-info btn-lg text-white" onclick="openPayModal('TRANSFER')"><i class="bi bi-bank"></i> Köçürmə ilə ödə</button>
-          <button class="btn btn-warning btn-lg" onclick="openPayModal('DEBT')"><i class="bi bi-journal-text"></i> Borca yaz</button>
-        </div>
+    <% if (quickIds.length) { %>
+    <div class="pos-fav-title">⚡ Tez satış</div>
+    <div class="pos-favorites" id="pos-favorites"></div>
+    <% } %>
+  </div>
+
+  <!-- CENTER PANEL -->
+  <div class="pos-center">
+    <div class="pos-products-header">
+      <h2 id="pos-current-category">Bütün məhsullar</h2>
+      <span class="pos-products-count" id="pos-products-count">0 məhsul</span>
+    </div>
+    <div class="pos-products-grid" id="pos-products-grid"></div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="pos-right">
+    <div class="pos-cart-header">
+      <h2>Cari satış</h2>
+      <span class="pos-cart-count" id="pos-cart-count">0</span>
+    </div>
+
+    <div class="pos-cart-items" id="pos-cart-items">
+      <div class="pos-empty-cart" id="pos-empty-cart">
+        <div class="icon">🛒</div>
+        <p>Səbət boşdur</p>
+        <p style="font-size:12px">Məhsul seçərək satışa başlayın</p>
+      </div>
+    </div>
+
+    <div class="pos-cart-footer">
+      <input type="text" id="sale-note" class="pos-note-input" placeholder="Qeyd (könüllü)...">
+      <div class="pos-total-row">
+        <span class="pos-total-label">Cəmi məbləğ</span>
+        <span class="pos-total-amount" id="pos-total-amount">0.00 ₼</span>
+      </div>
+      <div class="pos-payment-grid">
+        <button class="pos-pay-btn" onclick="openPayModal('CASH')">💵 Nağd</button>
+        <button class="pos-pay-btn" onclick="openPayModal('CARD')">💳 Kart</button>
+        <button class="pos-pay-btn" onclick="openPayModal('TRANSFER')">🏦 Köçürmə</button>
+        <button class="pos-pay-btn" onclick="openPayModal('DEBT')">📝 Borca yaz</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Odeme modal -->
+<!-- Ödəniş modalı -->
 <div class="modal" id="pay-modal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -93,7 +298,25 @@
   </div>
 </div>
 
-<!-- Kamera ile skan modal -->
+<!-- Uğurlu satış modalı -->
+<div class="modal" id="success-modal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center p-3">
+      <div class="modal-body">
+        <div class="pos-success-icon">✓</div>
+        <h5 class="mb-1">Satış uğurla tamamlandı!</h5>
+        <p class="text-muted mb-1">Qəbz nömrəsi</p>
+        <p class="fw-bold" style="color: var(--pos-primary, #1E3A5F);" id="success-receipt-no">#—</p>
+        <div class="d-grid gap-2 mt-3">
+          <button class="btn btn-success" id="success-print-btn">Qəbzi aç</button>
+          <button class="btn btn-light" data-bs-dismiss="modal">Yeni satış</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Kamera ilə skan modalı -->
 <div class="modal" id="scan-modal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -110,5 +333,11 @@
   </div>
 </div>
 
+<div class="pos-toast" id="pos-toast"></div>
+
+<script>
+  window.POS_PRODUCTS = <%- JSON.stringify(products).replace(/</g, '\\u003c') %>;
+  window.POS_QUICK_IDS = <%- JSON.stringify(quickIds) %>;
+</script>
 <script src="/js/pos.js?v=<%= assetVersion %>"></script>
 <%- include('../partials/foot') %>
