@@ -14,7 +14,7 @@
   <% } %>
 
   <form class="row g-2 mb-3" method="get" action="/products">
-    <div class="col-md-8">
+    <div class="col-md-6">
       <input type="text" name="q" value="<%= q %>" class="form-control" placeholder="Ad və ya barkod üzrə axtar...">
     </div>
     <div class="col-md-3">
@@ -23,6 +23,13 @@
         <% categories.forEach(c => { %>
         <option value="<%= c %>" <%= category === c ? 'selected' : '' %>><%= c %></option>
         <% }) %>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <select name="sort" class="form-select" onchange="this.form.submit()">
+        <option value="">Qalıq üzrə sırala</option>
+        <option value="qty_asc" <%= sort === 'qty_asc' ? 'selected' : '' %>>Ən az qalan → ən çox</option>
+        <option value="qty_desc" <%= sort === 'qty_desc' ? 'selected' : '' %>>Ən çox qalan → ən az</option>
       </select>
     </div>
     <div class="col-md-1">

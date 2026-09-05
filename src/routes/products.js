@@ -26,9 +26,15 @@ async function getCategoryOptions() {
   };
 }
 
+const STOCK_SORTS = {
+  qty_asc: { quantity: 'asc' },
+  qty_desc: { quantity: 'desc' },
+};
+
 router.get('/', asyncHandler(async (req, res) => {
   const q = (req.query.q || '').trim();
   const category = (req.query.category || '').trim();
+  const sort = STOCK_SORTS[req.query.sort] ? req.query.sort : '';
   const products = await prisma.product.findMany({
     where: {
       active: true,
@@ -42,7 +48,7 @@ router.get('/', asyncHandler(async (req, res) => {
           }
         : {}),
     },
-    orderBy: { name: 'asc' },
+    orderBy: STOCK_SORTS[sort] || { name: 'asc' },
   });
   const categoryRows = await prisma.product.findMany({
     where: { active: true, category: { not: null } },
@@ -51,7 +57,7 @@ router.get('/', asyncHandler(async (req, res) => {
   });
   const categories = categoryRows.map((c) => c.category).filter(Boolean).sort();
   const bulkAdded = req.query.bulk ? Number(req.query.bulk) : null;
-  res.render('products/index', { products, q, category, categories, bulkAdded });
+  res.render('products/index', { products, q, category, sort, categories, bulkAdded });
 }));
 
 router.get('/new', asyncHandler(async (req, res) => {
