@@ -1,7 +1,7 @@
 const express = require('express');
 const prisma = require('../config/db');
 const { requireRole } = require('../middleware/auth');
-const { generateUniqueBarcode } = require('../utils/barcode');
+const { generateUniqueBarcode, isValidEan13 } = require('../utils/barcode');
 const asyncHandler = require('../utils/asyncHandler');
 
 const router = express.Router();
@@ -294,7 +294,8 @@ router.get('/:id/label', asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
   const product = await prisma.product.findUnique({ where: { id } });
   if (!product) return res.status(404).render('error', { title: 'Tapılmadı', message: 'Mal tapılmadı.' });
-  res.render('products/label', { product });
+  const barcodeFormat = isValidEan13(product.barcode) ? 'EAN13' : 'CODE128';
+  res.render('products/label', { product, barcodeFormat });
 }));
 
 function round2(n) {
