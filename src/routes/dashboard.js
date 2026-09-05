@@ -3,7 +3,6 @@ const prisma = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
 const { requireRole } = require('../middleware/auth');
 const { getMonthlyExpenseBreakdown } = require('../utils/expenseAmortization');
-const { getDairyStockAlerts } = require('../utils/dairyStock');
 
 const router = express.Router();
 
@@ -21,7 +20,7 @@ router.get('/', asyncHandler(async (req, res) => {
   const monthFrom = new Date(Date.UTC(year, month - 1, 1));
   const monthTo = new Date(Date.UTC(year, month, 1));
 
-  const [cashSales, cardSales, transferSales, debtSales, saleItemsToday, openSession, lowStock, dairyAlerts] = await Promise.all([
+  const [cashSales, cardSales, transferSales, debtSales, saleItemsToday, openSession, lowStock] = await Promise.all([
     prisma.sale.aggregate({ _sum: { paidAmount: true }, _count: true, where: { paymentType: 'CASH', createdAt: { gte: from }, voided: false } }),
     prisma.sale.aggregate({ _sum: { paidAmount: true }, _count: true, where: { paymentType: 'CARD', createdAt: { gte: from }, voided: false } }),
     prisma.sale.aggregate({ _sum: { paidAmount: true }, _count: true, where: { paymentType: 'TRANSFER', createdAt: { gte: from }, voided: false } }),
@@ -29,7 +28,6 @@ router.get('/', asyncHandler(async (req, res) => {
     prisma.saleItem.findMany({ where: { sale: { createdAt: { gte: from }, voided: false } } }),
     prisma.cashSession.findFirst({ where: { closedAt: null } }),
     prisma.product.findMany({ where: { active: true, minStock: { not: null } } }),
-    getDairyStockAlerts(prisma),
   ]);
 
   const profitToday = saleItemsToday.reduce(
@@ -82,7 +80,6 @@ router.get('/', asyncHandler(async (req, res) => {
     profitToday,
     openSession,
     lowStockList,
-    dairyAlerts,
     year,
     month,
     monthRevenue,
