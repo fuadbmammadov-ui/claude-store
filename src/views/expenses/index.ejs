@@ -48,7 +48,7 @@
           <div class="text-muted small">cəmi <%= money(e.amount) %> ₼ / <%= e.periodMonths %> ay</div>
           <% } %>
         </td>
-        <td><%= e.method === 'CASH' ? 'Nağd' : e.method === 'CARD' ? 'Kart' : 'Köçürmə' %></td>
+        <td><%= e.method === 'CASH' ? 'Nağd' : e.method === 'CARD' ? 'Kart' : e.method === 'TRANSFER' ? 'Köçürmə' : 'Kənardan' %></td>
         <td><%= e.note || '-' %></td>
         <td><%= e.createdBy.fullName %></td>
         <td>
@@ -103,6 +103,7 @@
               <option value="CASH">Nağd</option>
               <option value="CARD">Kart</option>
               <option value="TRANSFER">Köçürmə</option>
+              <option value="EXTERNAL">Kənardan ödəniş (kassaya təsir etmir)</option>
             </select>
           </div>
           <div class="mb-3">

@@ -22,6 +22,7 @@ enum PaymentType {
   CARD
   TRANSFER
   DEBT
+  EXTERNAL
 }
 
 enum SaleStatus {

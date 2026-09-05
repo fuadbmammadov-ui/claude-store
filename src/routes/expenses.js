@@ -29,7 +29,7 @@ router.post('/', asyncHandler(async (req, res) => {
       name: name.trim(),
       amount: amount || 0,
       periodMonths: period,
-      method: ['CASH', 'CARD', 'TRANSFER'].includes(method) ? method : 'CASH',
+      method: ['CASH', 'CARD', 'TRANSFER', 'EXTERNAL'].includes(method) ? method : 'CASH',
       note: (note || '').trim() || null,
       createdById: req.session.user.id,
       ...(createdAt && !Number.isNaN(createdAt.getTime()) ? { createdAt } : {}),

@@ -20,6 +20,7 @@
         <option value="CASH">Nağd</option>
         <option value="CARD">Kart</option>
         <option value="TRANSFER">Köçürmə</option>
+        <option value="EXTERNAL">Kənardan ödəniş (kassaya təsir etmir)</option>
       </select>
     </div>
     <button type="submit" class="btn btn-success">Ödənişi qeydə al</button>
@@ -54,7 +55,7 @@
       <tr>
         <td><%= new Date(p.paidAt).toLocaleString('az-AZ') %></td>
         <td><%= money(p.amount) %> ₼</td>
-        <td><%= p.method === 'CASH' ? 'Nağd' : p.method === 'CARD' ? 'Kart' : 'Köçürmə' %></td>
+        <td><%= p.method === 'CASH' ? 'Nağd' : p.method === 'CARD' ? 'Kart' : p.method === 'TRANSFER' ? 'Köçürmə' : 'Kənardan' %></td>
         <td><%= p.paidBy.fullName %></td>
       </tr>
       <% }) %>

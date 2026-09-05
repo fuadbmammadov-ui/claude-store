@@ -70,7 +70,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 router.post('/:id/payments', requireRole('ADMIN'), asyncHandler(async (req, res) => {
   const supplierId = Number(req.params.id);
   const amount = Number(req.body.amount);
-  const method = ['CARD', 'TRANSFER'].includes(req.body.method) ? req.body.method : 'CASH';
+  const method = ['CARD', 'TRANSFER', 'EXTERNAL'].includes(req.body.method) ? req.body.method : 'CASH';
 
   if (!amount || amount <= 0) {
     return res.status(400).render('error', { title: 'Xəta', message: 'Ödəniş məbləği yanlışdır.' });
