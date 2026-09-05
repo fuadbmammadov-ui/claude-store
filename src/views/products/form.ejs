@@ -15,11 +15,17 @@
     <div class="row">
       <div class="col mb-3">
         <label class="form-label">Kateqoriya (könüllü)</label>
-        <input type="text" name="category" class="form-control" value="<%= product && product.category ? product.category : '' %>">
+        <input type="text" name="category" class="form-control" value="<%= product && product.category ? product.category : '' %>" list="category-list" autocomplete="off">
+        <datalist id="category-list">
+          <% categories.forEach(c => { %><option value="<%= c %>"><% }) %>
+        </datalist>
       </div>
       <div class="col mb-3">
         <label class="form-label">Alt kateqoriya (könüllü)</label>
-        <input type="text" name="subCategory" class="form-control" value="<%= product && product.subCategory ? product.subCategory : '' %>">
+        <input type="text" name="subCategory" class="form-control" value="<%= product && product.subCategory ? product.subCategory : '' %>" list="subcategory-list" autocomplete="off">
+        <datalist id="subcategory-list">
+          <% subCategories.forEach(c => { %><option value="<%= c %>"><% }) %>
+        </datalist>
       </div>
     </div>
     <div class="mb-3">

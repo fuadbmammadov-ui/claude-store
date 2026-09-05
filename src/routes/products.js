@@ -15,6 +15,17 @@ async function findOrCreateSupplier(tx, name) {
   return created.id;
 }
 
+async function getCategoryOptions() {
+  const [categoryRows, subCategoryRows] = await Promise.all([
+    prisma.product.findMany({ where: { active: true, category: { not: null } }, select: { category: true }, distinct: ['category'] }),
+    prisma.product.findMany({ where: { active: true, subCategory: { not: null } }, select: { subCategory: true }, distinct: ['subCategory'] }),
+  ]);
+  return {
+    categories: categoryRows.map((c) => c.category).filter(Boolean).sort(),
+    subCategories: subCategoryRows.map((c) => c.subCategory).filter(Boolean).sort(),
+  };
+}
+
 router.get('/', asyncHandler(async (req, res) => {
   const q = (req.query.q || '').trim();
   const category = (req.query.category || '').trim();
@@ -45,7 +56,8 @@ router.get('/', asyncHandler(async (req, res) => {
 
 router.get('/new', asyncHandler(async (req, res) => {
   const suppliers = await prisma.supplier.findMany({ orderBy: { name: 'asc' } });
-  res.render('products/form', { product: null, suppliers });
+  const { categories, subCategories } = await getCategoryOptions();
+  res.render('products/form', { product: null, suppliers, categories, subCategories });
 }));
 
 router.post('/', asyncHandler(async (req, res) => {
@@ -196,7 +208,8 @@ router.get('/:id/edit', requireRole('ADMIN'), asyncHandler(async (req, res) => {
   const product = await prisma.product.findUnique({ where: { id } });
   if (!product) return res.status(404).render('error', { title: 'Tapılmadı', message: 'Mal tapılmadı.' });
   const suppliers = await prisma.supplier.findMany({ orderBy: { name: 'asc' } });
-  res.render('products/form', { product, suppliers });
+  const { categories, subCategories } = await getCategoryOptions();
+  res.render('products/form', { product, suppliers, categories, subCategories });
 }));
 
 router.put('/:id', requireRole('ADMIN'), asyncHandler(async (req, res) => {
