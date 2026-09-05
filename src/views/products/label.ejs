@@ -40,7 +40,7 @@
 
   const barcodeFormat = <%- JSON.stringify(barcodeFormat) %>;
 
-  JsBarcode('#barcode-preview', barcodeValue, { format: barcodeFormat, height: 35, width: 1.4, fontSize: 10, margin: 2 });
+  JsBarcode('#barcode-preview', barcodeValue, { format: barcodeFormat, height: 35, width: 1, fontSize: 10, margin: 2 });
 
   function doPrint() {
     const copies = parseInt(document.getElementById('copies').value, 10) || 1;
@@ -55,7 +55,7 @@
       area.appendChild(box);
     }
     area.querySelectorAll('.barcode-svg').forEach((svg) => {
-      JsBarcode(svg, barcodeValue, { format: barcodeFormat, height: 35, width: 1.4, fontSize: 10, margin: 2 });
+      JsBarcode(svg, barcodeValue, { format: barcodeFormat, height: 35, width: 1, fontSize: 10, margin: 2 });
     });
     area.classList.add('label-print-page');
     area.style.display = 'block';
