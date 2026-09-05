@@ -1,8 +1,8 @@
 <%- include('partials/head', { title: 'Bugünkü satışlar' }) %>
 <%- include('partials/nav') %>
 <div class="container-fluid py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h3 class="mb-0">
       Bugünkü satışlar
       <% if (type) { %>
       <span class="text-muted fs-6">
@@ -13,7 +13,7 @@
     <a href="/" class="btn btn-outline-secondary btn-sm">← Panelə qayıt</a>
   </div>
 
-  <div class="btn-group mb-3">
+  <div class="d-flex flex-wrap gap-2 mb-3">
     <a href="/today-sales" class="btn btn-sm <%= !type ? 'btn-primary' : 'btn-outline-primary' %>">Hamısı</a>
     <a href="/today-sales?type=CASH" class="btn btn-sm <%= type === 'CASH' ? 'btn-primary' : 'btn-outline-primary' %>">Nağd</a>
     <a href="/today-sales?type=CARD" class="btn btn-sm <%= type === 'CARD' ? 'btn-primary' : 'btn-outline-primary' %>">Kart</a>
@@ -38,6 +38,7 @@
       </h2>
       <div id="sale-<%= s.id %>" class="accordion-collapse collapse" data-bs-parent="#sales-accordion">
         <div class="accordion-body">
+          <div class="table-responsive">
           <table class="table table-sm mb-2">
             <thead><tr><th>Mal</th><th>Miqdar</th><th>Qiymət</th><th>Endirim</th><th>Cəmi</th></tr></thead>
             <tbody>
@@ -52,6 +53,7 @@
               <% }) %>
             </tbody>
           </table>
+          </div>
           <a href="/pos/receipt/<%= s.id %>" target="_blank" class="btn btn-sm btn-outline-secondary">Qəbzi çap et</a>
           <% if (s.voided) { %>
           <div class="text-danger small mt-2">

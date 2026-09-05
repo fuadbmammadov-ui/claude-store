@@ -11,14 +11,14 @@
   </form>
 
   <div class="row g-3 mb-4">
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
       <div class="card p-3 text-center">
         <div class="text-muted small">Ümumi xərc</div>
         <div class="fs-4 fw-bold text-danger"><%= money(total) %> ₼</div>
       </div>
     </div>
     <% Object.entries(byCategory).forEach(([cat, amt]) => { %>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
       <div class="card p-3 text-center">
         <div class="text-muted small"><%= cat %></div>
         <div class="fw-bold"><%= money(amt) %> ₼</div>
@@ -27,6 +27,7 @@
     <% }) %>
   </div>
 
+  <div class="table-responsive">
   <table class="table bg-white">
     <thead><tr><th>Tarix</th><th>Kateqoriya</th><th>Ad</th><th>Aylıq məbləğ</th><th>Ödəniş</th><th>Qeyd</th><th>Əlavə edən</th><th></th></tr></thead>
     <tbody>
@@ -63,6 +64,7 @@
       <% } %>
     </tbody>
   </table>
+  </div>
 </div>
 
 <div class="modal" id="new-expense-modal" tabindex="-1">

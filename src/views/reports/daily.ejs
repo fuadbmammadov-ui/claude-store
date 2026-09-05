@@ -8,19 +8,20 @@
   </form>
 
   <div class="row g-3 mb-4">
-    <div class="col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Nağd</div><div class="fw-bold"><%= money(totals.cash) %> ₼</div></div></div>
-    <div class="col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Kart</div><div class="fw-bold"><%= money(totals.card) %> ₼</div></div></div>
-    <div class="col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Köçürmə</div><div class="fw-bold"><%= money(totals.transfer) %> ₼</div></div></div>
-    <div class="col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Borc</div><div class="fw-bold text-danger"><%= money(totals.debt) %> ₼</div></div></div>
-    <div class="col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Ümumi satış</div><div class="fw-bold"><%= money(totals.revenue) %> ₼</div></div></div>
-    <div class="col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Qazanc (marja)</div><div class="fw-bold text-success"><%= money(totals.profit) %> ₼</div></div></div>
+    <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Nağd</div><div class="fw-bold"><%= money(totals.cash) %> ₼</div></div></div>
+    <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Kart</div><div class="fw-bold"><%= money(totals.card) %> ₼</div></div></div>
+    <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Köçürmə</div><div class="fw-bold"><%= money(totals.transfer) %> ₼</div></div></div>
+    <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Borc</div><div class="fw-bold text-danger"><%= money(totals.debt) %> ₼</div></div></div>
+    <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Ümumi satış</div><div class="fw-bold"><%= money(totals.revenue) %> ₼</div></div></div>
+    <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Qazanc (marja)</div><div class="fw-bold text-success"><%= money(totals.profit) %> ₼</div></div></div>
   </div>
   <div class="row g-3 mb-4">
-    <div class="col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Mal alışı (bugün)</div><div class="fw-bold"><%= money(totalPurchases) %> ₼</div></div></div>
-    <div class="col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Xərclər (bugün)</div><div class="fw-bold text-danger"><%= money(totalExpensesToday) %> ₼</div></div></div>
+    <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Mal alışı (bugün)</div><div class="fw-bold"><%= money(totalPurchases) %> ₼</div></div></div>
+    <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Xərclər (bugün)</div><div class="fw-bold text-danger"><%= money(totalExpensesToday) %> ₼</div></div></div>
   </div>
 
   <h5>Satışlar (çeklər) — məbləğə klikləyin, məhsulları görün</h5>
+  <div class="table-responsive">
   <table class="table table-sm bg-white">
     <thead><tr><th>Vaxt</th><th>Satıcı</th><th>Müştəri</th><th>Növ</th><th>Məbləğ</th></tr></thead>
     <tbody>
@@ -62,8 +63,10 @@
       <% } %>
     </tbody>
   </table>
+  </div>
 
   <h5 class="mt-4">Mal qəbulları</h5>
+  <div class="table-responsive">
   <table class="table table-sm bg-white">
     <thead><tr><th>Vaxt</th><th>Mal</th><th>Miqdar</th><th>Alış qiyməti</th><th>Təchizatçı</th><th>Qəbul edən</th></tr></thead>
     <tbody>
@@ -82,8 +85,10 @@
       <% } %>
     </tbody>
   </table>
+  </div>
 
   <h5 class="mt-4">Xərclər</h5>
+  <div class="table-responsive">
   <table class="table table-sm bg-white">
     <thead><tr><th>Vaxt</th><th>Kateqoriya</th><th>Ad</th><th>Məbləğ</th></tr></thead>
     <tbody>
@@ -100,5 +105,6 @@
       <% } %>
     </tbody>
   </table>
+  </div>
 </div>
 <%- include('../partials/foot') %>

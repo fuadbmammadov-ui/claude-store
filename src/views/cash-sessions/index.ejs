@@ -22,6 +22,7 @@
   <div class="card p-4 mb-4" style="max-width: 520px;">
     <h5>Açıq kassa</h5>
     <p class="text-muted mb-1">Açılış: <%= new Date(openSession.openedAt).toLocaleString('az-AZ') %> — <%= openSession.openedBy.fullName %></p>
+    <div class="table-responsive">
     <table class="table">
       <tr><td>Açılış məbləği</td><td class="text-end"><%= money(openSession.openingAmount) %> ₼</td></tr>
       <tr><td>Nağd satış + borc ödənişi (giriş)</td><td class="text-end"><%= money(totals.cash) %> ₼</td></tr>
@@ -32,6 +33,7 @@
       <tr><td>Nağd xərclər (çıxış)</td><td class="text-end text-danger">-<%= money(totals.cashOutExpenses) %> ₼</td></tr>
       <tr class="table-primary fw-bold"><td>Kassada olmalı nağd məbləğ</td><td class="text-end"><%= money(totals.expectedCash) %> ₼</td></tr>
     </table>
+    </div>
     <form method="post" action="/cash-sessions/<%= openSession.id %>/close">
       <div class="mb-3">
         <label class="form-label">Kassada faktiki sayılan məbləğ (₼)</label>
@@ -47,6 +49,7 @@
   <% } %>
 
   <h5 class="mt-4">Tarixçə</h5>
+  <div class="table-responsive">
   <table class="table bg-white">
     <thead><tr><th>Açılış</th><th>Bağlanış</th><th>Olmalı</th><th>Faktiki</th><th>Fərq</th></tr></thead>
     <tbody>
@@ -67,5 +70,6 @@
       <% } %>
     </tbody>
   </table>
+  </div>
 </div>
 <%- include('../partials/foot') %>

@@ -9,41 +9,41 @@
 
   <% if (currentUser.role === 'ADMIN') { %>
   <div class="row g-3 mb-4">
-    <div class="col-md-2">
+    <div class="col-6 col-md-2">
       <a href="/today-sales?type=CASH" class="card p-3 text-center text-decoration-none text-reset h-100">
         <div class="text-muted small">Nağd satış</div>
         <div class="fs-5 fw-bold"><%= money(cashTotal) %> ₼</div>
         <div class="text-muted small"><%= cashCount %> satış</div>
       </a>
     </div>
-    <div class="col-md-2">
+    <div class="col-6 col-md-2">
       <a href="/today-sales?type=CARD" class="card p-3 text-center text-decoration-none text-reset h-100">
         <div class="text-muted small">Kartla satış</div>
         <div class="fs-5 fw-bold"><%= money(cardTotal) %> ₼</div>
         <div class="text-muted small"><%= cardCount %> satış</div>
       </a>
     </div>
-    <div class="col-md-2">
+    <div class="col-6 col-md-2">
       <a href="/today-sales?type=TRANSFER" class="card p-3 text-center text-decoration-none text-reset h-100">
         <div class="text-muted small">Köçürmə</div>
         <div class="fs-5 fw-bold"><%= money(transferTotal) %> ₼</div>
         <div class="text-muted small"><%= transferCount %> satış</div>
       </a>
     </div>
-    <div class="col-md-2">
+    <div class="col-6 col-md-2">
       <a href="/today-sales?type=DEBT" class="card p-3 text-center text-decoration-none text-reset h-100">
         <div class="text-muted small">Borca yazılan</div>
         <div class="fs-5 fw-bold text-danger"><%= money(debtTotal) %> ₼</div>
         <div class="text-muted small"><%= debtCount %> satış</div>
       </a>
     </div>
-    <div class="col-md-2">
+    <div class="col-6 col-md-2">
       <div class="card p-3 text-center">
         <div class="text-muted small">Bugünkü qazanc</div>
         <div class="fs-5 fw-bold text-success"><%= money(profitToday) %> ₼</div>
       </div>
     </div>
-    <div class="col-md-2">
+    <div class="col-6 col-md-2">
       <div class="card p-3 text-center">
         <div class="text-muted small">Təchizatçı borcumuz</div>
         <div class="fs-5 fw-bold text-danger"><%= money(supplierDebtTotal) %> ₼</div>
@@ -73,8 +73,8 @@
 
   <% if (currentUser.role === 'ADMIN') { %>
   <hr class="my-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4>Aylıq maliyyə göstəriciləri</h4>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h4 class="mb-0">Aylıq maliyyə göstəriciləri</h4>
     <form method="get" class="d-flex gap-2">
       <select name="month" class="form-select" onchange="this.form.submit()">
         <% for (let m = 1; m <= 12; m++) { %>
@@ -95,25 +95,25 @@
   </div>
 
   <div class="row g-3 mb-4">
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
       <div class="card p-3 text-center">
         <div class="text-muted small">Aylıq satış</div>
         <div class="fs-5 fw-bold"><%= money(monthRevenue) %> ₼</div>
       </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
       <div class="card p-3 text-center">
         <div class="text-muted small">Ümumi mənfəət (marja)</div>
         <div class="fs-5 fw-bold"><%= money(monthGrossProfit) %> ₼</div>
       </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
       <div class="card p-3 text-center">
         <div class="text-muted small">Xərclər</div>
         <div class="fs-5 fw-bold text-danger"><%= money(monthExpenseTotal) %> ₼</div>
       </div>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
       <div class="card p-3 text-center">
         <div class="text-muted small">Net mənfəət</div>
         <div class="fs-5 fw-bold <%= monthNetProfit >= 0 ? 'text-success' : 'text-danger' %>"><%= money(monthNetProfit) %> ₼</div>
@@ -125,6 +125,7 @@
     <div class="col-md-6">
       <div class="card p-3">
         <h6>Ən çox satılan mallar (məbləğ üzrə)</h6>
+        <div class="table-responsive">
         <table class="table table-sm mb-0">
           <thead><tr><th>Mal</th><th>Miqdar</th><th>Satış</th></tr></thead>
           <tbody>
@@ -134,11 +135,13 @@
             <% if (!topSelling.length) { %><tr><td colspan="3" class="text-center text-muted">Məlumat yoxdur</td></tr><% } %>
           </tbody>
         </table>
+        </div>
       </div>
     </div>
     <div class="col-md-6">
       <div class="card p-3">
         <h6>Ən çox mənfəət gətirən mallar</h6>
+        <div class="table-responsive">
         <table class="table table-sm mb-0">
           <thead><tr><th>Mal</th><th>Mənfəət</th></tr></thead>
           <tbody>
@@ -148,6 +151,7 @@
             <% if (!topProfit.length) { %><tr><td colspan="2" class="text-center text-muted">Məlumat yoxdur</td></tr><% } %>
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   </div>
@@ -155,6 +159,7 @@
 
   <% if (lowStockList.length) { %>
   <h5>Azalan mallar</h5>
+  <div class="table-responsive">
   <table class="table bg-white">
     <thead><tr><th>Mal</th><th>Qalıq</th><th>Minimum</th></tr></thead>
     <tbody>
@@ -167,6 +172,7 @@
       <% }) %>
     </tbody>
   </table>
+  </div>
   <% } %>
 </div>
 <%- include('partials/foot') %>

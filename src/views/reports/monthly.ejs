@@ -22,7 +22,8 @@
   </div>
 
   <h5>Əsas maliyyə göstəriciləri</h5>
-  <table class="table bg-white" style="max-width: 640px;">
+  <div class="table-responsive" style="max-width: 640px;">
+  <table class="table bg-white">
     <tbody>
       <tr><td>Ümumi satış</td><td class="text-end"><%= money(revenue) %> ₼</td></tr>
       <tr><td>Satılan malların maya dəyəri (COGS)</td><td class="text-end"><%= money(cogs) %> ₼</td></tr>
@@ -40,9 +41,11 @@
       <tr><td>Cash Flow (təxmini)</td><td class="text-end"><%= money(cashFlowEstimate) %> ₼</td></tr>
     </tbody>
   </table>
+  </div>
 
   <h5 class="mt-4">Break-even analizi</h5>
-  <table class="table bg-white" style="max-width: 640px;">
+  <div class="table-responsive" style="max-width: 640px;">
+  <table class="table bg-white">
     <tbody>
       <tr><td>Aylıq sabit xərclər (təxmini)</td><td class="text-end"><%= money(fixedCosts) %> ₼</td></tr>
       <tr><td>Orta Gross Margin %</td><td class="text-end"><%= grossMarginPct.toFixed(1) %>%</td></tr>
@@ -50,9 +53,11 @@
       <tr><td>Gündəlik minimum satış hədəfi</td><td class="text-end"><%= money(dailyTarget) %> ₼</td></tr>
     </tbody>
   </table>
+  </div>
 
   <h5 class="mt-4">Əlavə göstəricilər</h5>
-  <table class="table bg-white" style="max-width: 640px;">
+  <div class="table-responsive" style="max-width: 640px;">
+  <table class="table bg-white">
     <tbody>
       <tr><td>Orta günlük satış</td><td class="text-end"><%= money(avgDailySale) %> ₼</td></tr>
       <tr><td>Satış əməliyyatlarının sayı</td><td class="text-end"><%= salesCount %></td></tr>
@@ -60,5 +65,6 @@
       <tr><td>Inventory Turnover (təxmini)</td><td class="text-end"><%= inventoryTurnover.toFixed(2) %></td></tr>
     </tbody>
   </table>
+  </div>
 </div>
 <%- include('../partials/foot') %>

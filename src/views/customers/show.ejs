@@ -26,6 +26,7 @@
   <% } %>
 
   <h5>Satış tarixçəsi</h5>
+  <div class="table-responsive">
   <table class="table bg-white">
     <thead><tr><th>Tarix</th><th>Cəm</th><th>Ödənilib</th><th>Status</th></tr></thead>
     <tbody>
@@ -39,8 +40,10 @@
       <% }) %>
     </tbody>
   </table>
+  </div>
 
   <h5>Ödəniş tarixçəsi</h5>
+  <div class="table-responsive">
   <table class="table bg-white">
     <thead><tr><th>Tarix</th><th>Məbləğ</th><th>Növ</th><th>Qəbul edən</th></tr></thead>
     <tbody>
@@ -57,5 +60,6 @@
       <% } %>
     </tbody>
   </table>
+  </div>
 </div>
 <%- include('../partials/foot') %>

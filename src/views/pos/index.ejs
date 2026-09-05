@@ -196,6 +196,46 @@
     .pos-left { width: 210px; }
     .pos-right { width: 300px; }
   }
+
+  /* Phones and portrait tablets: stack the three panels instead of squeezing them side by side */
+  @media (max-width: 992px) {
+    .pos-app {
+      flex-direction: column;
+      height: auto;
+      min-height: calc(100vh - 56px);
+      overflow: visible;
+      padding: 10px;
+      gap: 10px;
+    }
+    .pos-left, .pos-center, .pos-right {
+      width: 100%;
+      flex: none;
+    }
+    .pos-categories {
+      flex-direction: row;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overflow-y: visible;
+      padding-bottom: 4px;
+    }
+    .pos-cat-btn {
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .pos-favorites {
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      overflow-y: visible;
+    }
+    .pos-center {
+      min-height: 360px;
+    }
+    .pos-products-grid {
+      overflow-y: visible;
+    }
+    .pos-cart-items {
+      max-height: 280px;
+    }
+  }
 </style>
 
 <div class="pos-app">
