@@ -34,4 +34,4 @@ async function generateUniqueBarcode() {
   throw new Error('Unikal barkod yaradıla bilmədi, yenidən cəhd edin.');
 }
 
-module.exports = { generateUniqueBarcode, isValidEan13 };
+module.exports = { generateUniqueBarcode, isValidEan13, ean13CheckDigit };
