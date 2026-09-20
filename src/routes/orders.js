@@ -11,16 +11,88 @@ function round2(n) {
   return Math.round((Number(n) || 0) * 100) / 100;
 }
 
-// paidAmount is a single running total (no per-tranche history), so we track just one
-// "when was it last written" timestamp: it moves forward whenever the amount actually
-// changes, and stays put on saves that don't touch it. That's what lets a draft's advance
-// payment land in the cash register on the day it was actually entered, instead of the day
-// the order later gets confirmed — while an amount typed for the first time at confirm still
-// lands on the confirm date, since in that case "last changed" and "confirmed" are the same moment.
-function resolvePaidAt(existingAmount, existingPaidAt, newAmount) {
-  if (round2(newAmount) <= 0) return null;
-  if (round2(newAmount) !== round2(existingAmount)) return new Date();
-  return existingPaidAt || new Date();
+function cartTotal(items) {
+  return items.reduce((s, it) => s + Number(it.quantity) * Number(it.purchasePrice), 0);
+}
+
+// Advance payments on a DRAFT order are real cash-out events, recorded the moment the amount
+// is written — not deferred until confirm — because the money genuinely leaves the register
+// that day. paidAmount is a single running total (no per-tranche history), so we keep exactly
+// one ledger row per order (purchaseOrderId set, stockReceiptId null) synced on every draft
+// save: created once it goes above 0, amount/paidAt updated when it changes, deleted when it
+// goes back to 0. At confirm time this single row is reallocated across the newly created
+// receipts (see reallocateAdvanceToReceipts) instead of a fresh cash-out being recorded, since
+// the money already left the till on the day this row says it did.
+async function syncDraftAdvance(tx, orderId, supplierId, actorId, cartTotalAmount, requestedAmount) {
+  const existing = await tx.supplierPayment.findFirst({ where: { purchaseOrderId: orderId, stockReceiptId: null } });
+
+  if (!supplierId) {
+    // No supplier resolved yet — nothing to attach the cash-out to. Keep the typed number for
+    // display but drop any stale ledger row (e.g. supplier field was cleared).
+    if (existing) await tx.supplierPayment.delete({ where: { id: existing.id } });
+    return { paidAmount: Math.max(0, round2(requestedAmount)), paidAt: null };
+  }
+
+  const clamped = Math.min(Math.max(0, round2(requestedAmount)), Math.max(0, round2(cartTotalAmount)));
+
+  if (clamped <= 0) {
+    if (existing) await tx.supplierPayment.delete({ where: { id: existing.id } });
+    return { paidAmount: 0, paidAt: null };
+  }
+
+  if (existing) {
+    if (round2(existing.amount) === clamped && existing.supplierId === supplierId) {
+      return { paidAmount: clamped, paidAt: existing.paidAt };
+    }
+    const updated = await tx.supplierPayment.update({
+      where: { id: existing.id },
+      data: { amount: clamped, supplierId, paidAt: new Date(), paidById: actorId },
+    });
+    return { paidAmount: clamped, paidAt: updated.paidAt };
+  }
+
+  const created = await tx.supplierPayment.create({
+    data: { purchaseOrderId: orderId, supplierId, amount: clamped, method: 'CASH', paidById: actorId, paidAt: new Date() },
+  });
+  return { paidAmount: clamped, paidAt: created.paidAt };
+}
+
+// Moves the order's advance ledger row (if any) onto the receipts just created by
+// materializeItemsAsReceipts, oldest item first. This is a reallocation, not a new cash-out:
+// the money already left the register on advance.paidAt (the day it was actually written into
+// the draft), so that date/actor is reused instead of stamping `now()`.
+async function reallocateAdvanceToReceipts(tx, orderId, supplierId) {
+  const advance = await tx.supplierPayment.findFirst({ where: { purchaseOrderId: orderId, stockReceiptId: null } });
+  if (!advance) return;
+
+  const items = await tx.purchaseOrderItem.findMany({ where: { purchaseOrderId: orderId }, orderBy: { id: 'asc' } });
+
+  let remaining = round2(advance.amount);
+  for (const item of items) {
+    if (remaining <= 0) break;
+    if (!item.stockReceiptId) continue;
+    const totalAmount = round2(Number(item.quantity) * Number(item.purchasePrice));
+    const applied = Math.min(totalAmount, remaining);
+    if (applied <= 0) continue;
+    remaining = round2(remaining - applied);
+
+    await tx.stockReceipt.update({
+      where: { id: item.stockReceiptId },
+      data: { paidAmount: applied, status: applied >= totalAmount ? 'PAID' : 'DEBT' },
+    });
+    await tx.supplierPayment.create({
+      data: {
+        stockReceiptId: item.stockReceiptId,
+        supplierId,
+        amount: applied,
+        method: 'CASH',
+        paidById: advance.paidById,
+        paidAt: advance.paidAt,
+      },
+    });
+  }
+
+  await tx.supplierPayment.delete({ where: { id: advance.id } });
 }
 
 async function findOrCreateSupplier(tx, name) {
@@ -63,14 +135,12 @@ async function replaceDraftItems(tx, orderId, items, products) {
 }
 
 // First-time confirm: every current item gets a fresh StockReceipt (debt) + stock increment.
-// If paidToApply > 0 (goods already paid for, fully or partly, e.g. cash advance), it is applied
-// across the new receipts oldest-first and logged as a CASH SupplierPayment so it shows up in kassa —
-// mirroring how a manual supplier payment on /suppliers/:id/payments works.
-async function materializeItemsAsReceipts(tx, orderId, items, products, supplierId, supplierName, actorId, paidToApply, paidAt) {
+// Any advance already paid on the draft is applied separately afterwards, by
+// reallocateAdvanceToReceipts — this function only creates the receipts.
+async function materializeItemsAsReceipts(tx, orderId, items, products, supplierId, supplierName, actorId) {
   await replaceDraftItems(tx, orderId, items, products);
   const createdItems = await tx.purchaseOrderItem.findMany({ where: { purchaseOrderId: orderId } });
 
-  const receipts = [];
   for (const item of createdItems) {
     const totalAmount = round2(Number(item.quantity) * Number(item.purchasePrice));
     const receipt = await tx.stockReceipt.create({
@@ -88,35 +158,6 @@ async function materializeItemsAsReceipts(tx, orderId, items, products, supplier
     });
     await tx.purchaseOrderItem.update({ where: { id: item.id }, data: { stockReceiptId: receipt.id } });
     await tx.product.update({ where: { id: item.productId }, data: { quantity: { increment: item.quantity } } });
-    receipts.push({ id: receipt.id, totalAmount });
-  }
-
-  let remaining = Math.max(0, round2(paidToApply));
-  if (remaining > 0 && supplierId) {
-    for (const receipt of receipts) {
-      if (remaining <= 0) break;
-      const applied = Math.min(receipt.totalAmount, remaining);
-      if (applied <= 0) continue;
-      remaining = round2(remaining - applied);
-
-      await tx.stockReceipt.update({
-        where: { id: receipt.id },
-        data: {
-          paidAmount: applied,
-          status: applied >= receipt.totalAmount ? 'PAID' : 'DEBT',
-        },
-      });
-      await tx.supplierPayment.create({
-        data: {
-          stockReceiptId: receipt.id,
-          supplierId,
-          amount: applied,
-          method: 'CASH',
-          paidById: actorId,
-          paidAt: paidAt || new Date(),
-        },
-      });
-    }
   }
 }
 
@@ -248,7 +289,7 @@ router.get('/new', asyncHandler(async (req, res) => {
 // so the draft lives on the server (not just in the browser) from the very start.
 router.post('/', asyncHandler(async (req, res) => {
   const { supplierName, note } = req.body;
-  const paidAmount = Math.max(0, round2(req.body.paidAmount));
+  const requestedPaidAmount = Math.max(0, round2(req.body.paidAmount));
   const items = parseItems(req.body.items);
 
   const products = await prisma.product.findMany({ where: { id: { in: items.map((i) => i.productId) } } });
@@ -261,12 +302,13 @@ router.post('/', asyncHandler(async (req, res) => {
         supplierId,
         supplierName: (supplierName || '').trim() || null,
         note: (note || '').trim() || null,
-        paidAmount,
-        paidAt: paidAmount > 0 ? new Date() : null,
+        paidAmount: 0,
         createdById: req.session.user.id,
       },
     });
     await replaceDraftItems(tx, order.id, items, productMap);
+    const { paidAmount, paidAt } = await syncDraftAdvance(tx, order.id, supplierId, req.session.user.id, cartTotal(items), requestedPaidAmount);
+    await tx.purchaseOrder.update({ where: { id: order.id }, data: { paidAmount, paidAt } });
     return order.id;
   });
 
@@ -333,9 +375,9 @@ router.put('/:id', asyncHandler(async (req, res) => {
       // Once confirmed, "already paid" is applied for good — further payments go through
       // the supplier payments page, not this form, so paidAmount is only writable pre-confirm.
       if (order.status === 'DRAFT' && req.body.paidAmount !== undefined) {
-        const newPaidAmount = Math.max(0, round2(req.body.paidAmount));
-        orderData.paidAmount = newPaidAmount;
-        orderData.paidAt = resolvePaidAt(order.paidAmount, order.paidAt, newPaidAmount);
+        const synced = await syncDraftAdvance(tx, id, supplierId, req.session.user.id, cartTotal(items), req.body.paidAmount);
+        orderData.paidAmount = synced.paidAmount;
+        orderData.paidAt = synced.paidAt;
       }
       await tx.purchaseOrder.update({ where: { id }, data: orderData });
 
@@ -359,14 +401,12 @@ router.post('/:id/confirm', asyncHandler(async (req, res) => {
   if (order.status !== 'DRAFT') return res.status(400).json({ error: 'Bu sifariş artıq təsdiqlənib' });
 
   const { supplierName, note } = req.body;
-  const paidAmount = Math.max(0, round2(req.body.paidAmount));
+  const requestedPaidAmount = Math.max(0, round2(req.body.paidAmount));
   const items = parseItems(req.body.items);
   if (!items.length) return res.status(400).json({ error: 'Siyahıda mal yoxdur' });
 
   const products = await prisma.product.findMany({ where: { id: { in: items.map((i) => i.productId) } } });
   const productMap = new Map(products.map((p) => [p.id, p]));
-
-  const paidAt = resolvePaidAt(order.paidAmount, order.paidAt, paidAmount);
 
   await prisma.$transaction(async (tx) => {
     const supplierId = await findOrCreateSupplier(tx, supplierName);
@@ -376,12 +416,14 @@ router.post('/:id/confirm', asyncHandler(async (req, res) => {
         supplierId,
         supplierName: (supplierName || '').trim() || null,
         note: (note || '').trim() || null,
-        paidAmount,
-        paidAt,
       },
     });
 
-    await materializeItemsAsReceipts(tx, id, items, productMap, supplierId, supplierName, req.session.user.id, paidAmount, paidAt);
+    const { paidAmount, paidAt } = await syncDraftAdvance(tx, id, supplierId, req.session.user.id, cartTotal(items), requestedPaidAmount);
+    await tx.purchaseOrder.update({ where: { id }, data: { paidAmount, paidAt } });
+
+    await materializeItemsAsReceipts(tx, id, items, productMap, supplierId, supplierName, req.session.user.id);
+    await reallocateAdvanceToReceipts(tx, id, supplierId);
 
     await tx.purchaseOrder.update({
       where: { id },
@@ -417,6 +459,12 @@ router.post('/:id/cancel', asyncHandler(async (req, res) => {
         await tx.stockReceipt.delete({ where: { id: item.stockReceiptId } });
         await tx.product.update({ where: { id: item.productId }, data: { quantity: { decrement: item.quantity } } });
       }
+    }
+    // A still-DRAFT order can already have a real cash-out recorded (advance paid before
+    // confirm, see syncDraftAdvance) — cancelling means the order never happens, so that
+    // money is credited back to the register by removing the ledger row.
+    if (order.status === 'DRAFT') {
+      await tx.supplierPayment.deleteMany({ where: { purchaseOrderId: id, stockReceiptId: null } });
     }
     await tx.purchaseOrder.update({ where: { id }, data: { status: 'CANCELLED' } });
   });

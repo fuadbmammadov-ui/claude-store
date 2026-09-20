@@ -80,7 +80,7 @@
       <label class="form-label small text-muted mb-1 mt-2">Əvvəlcədən ödənilmiş məbləğ (₼)</label>
       <input type="number" step="0.01" min="0" id="ord-paid-amount" class="form-control"
              value="<%= typeof paidAmount !== 'undefined' ? paidAmount : 0 %>" placeholder="0">
-      <div class="form-text" style="font-size:11px;">Əgər təchizatçıya artıq nağd ödəniş edilibsə (avans), buraya yazın — sifariş təsdiqlənəndə kassadan bu qədər çıxılacaq, amma çıxış tarixi bu məbləği yazdığınız gün olacaq (bugünkü kassa), təsdiq günü deyil. Təsdiq anında yazsanız, çıxış elə təsdiq gününə düşür. Qalan hissə (yazılmayan məbləğ) təchizatçıya borc kimi qeydə alınır. 0 saxlasanız kassaya toxunulmur, hamısı borc yazılır.</div>
+      <div class="form-text" style="font-size:11px;">Əgər təchizatçıya artıq nağd ödəniş edilibsə (avans), buraya yazın — məbləğ elə İNDİ, yazdığınız an kassadan çıxılır (bugünkü kassa), təsdiqi gözləmir. Sifariş təsdiqlənəndə bu məbləğ mallara bölüşdürülür, qalan hissə isə təchizatçıya borc kimi qeydə alınır. 0 saxlasanız kassaya toxunulmur, hamısı borc yazılır.</div>
       <% } %>
     </div>
     <div class="ord-panel" style="flex:1; display:flex; flex-direction:column; gap:12px; overflow:hidden;">
