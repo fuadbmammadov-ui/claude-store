@@ -11,6 +11,18 @@ function round2(n) {
   return Math.round((Number(n) || 0) * 100) / 100;
 }
 
+// paidAmount is a single running total (no per-tranche history), so we track just one
+// "when was it last written" timestamp: it moves forward whenever the amount actually
+// changes, and stays put on saves that don't touch it. That's what lets a draft's advance
+// payment land in the cash register on the day it was actually entered, instead of the day
+// the order later gets confirmed — while an amount typed for the first time at confirm still
+// lands on the confirm date, since in that case "last changed" and "confirmed" are the same moment.
+function resolvePaidAt(existingAmount, existingPaidAt, newAmount) {
+  if (round2(newAmount) <= 0) return null;
+  if (round2(newAmount) !== round2(existingAmount)) return new Date();
+  return existingPaidAt || new Date();
+}
+
 async function findOrCreateSupplier(tx, name) {
   const trimmed = (name || '').trim();
   if (!trimmed) return null;
@@ -54,7 +66,7 @@ async function replaceDraftItems(tx, orderId, items, products) {
 // If paidToApply > 0 (goods already paid for, fully or partly, e.g. cash advance), it is applied
 // across the new receipts oldest-first and logged as a CASH SupplierPayment so it shows up in kassa —
 // mirroring how a manual supplier payment on /suppliers/:id/payments works.
-async function materializeItemsAsReceipts(tx, orderId, items, products, supplierId, supplierName, actorId, paidToApply) {
+async function materializeItemsAsReceipts(tx, orderId, items, products, supplierId, supplierName, actorId, paidToApply, paidAt) {
   await replaceDraftItems(tx, orderId, items, products);
   const createdItems = await tx.purchaseOrderItem.findMany({ where: { purchaseOrderId: orderId } });
 
@@ -101,6 +113,7 @@ async function materializeItemsAsReceipts(tx, orderId, items, products, supplier
           amount: applied,
           method: 'CASH',
           paidById: actorId,
+          paidAt: paidAt || new Date(),
         },
       });
     }
@@ -249,6 +262,7 @@ router.post('/', asyncHandler(async (req, res) => {
         supplierName: (supplierName || '').trim() || null,
         note: (note || '').trim() || null,
         paidAmount,
+        paidAt: paidAmount > 0 ? new Date() : null,
         createdById: req.session.user.id,
       },
     });
@@ -319,7 +333,9 @@ router.put('/:id', asyncHandler(async (req, res) => {
       // Once confirmed, "already paid" is applied for good — further payments go through
       // the supplier payments page, not this form, so paidAmount is only writable pre-confirm.
       if (order.status === 'DRAFT' && req.body.paidAmount !== undefined) {
-        orderData.paidAmount = Math.max(0, round2(req.body.paidAmount));
+        const newPaidAmount = Math.max(0, round2(req.body.paidAmount));
+        orderData.paidAmount = newPaidAmount;
+        orderData.paidAt = resolvePaidAt(order.paidAmount, order.paidAt, newPaidAmount);
       }
       await tx.purchaseOrder.update({ where: { id }, data: orderData });
 
@@ -350,6 +366,8 @@ router.post('/:id/confirm', asyncHandler(async (req, res) => {
   const products = await prisma.product.findMany({ where: { id: { in: items.map((i) => i.productId) } } });
   const productMap = new Map(products.map((p) => [p.id, p]));
 
+  const paidAt = resolvePaidAt(order.paidAmount, order.paidAt, paidAmount);
+
   await prisma.$transaction(async (tx) => {
     const supplierId = await findOrCreateSupplier(tx, supplierName);
     await tx.purchaseOrder.update({
@@ -359,10 +377,11 @@ router.post('/:id/confirm', asyncHandler(async (req, res) => {
         supplierName: (supplierName || '').trim() || null,
         note: (note || '').trim() || null,
         paidAmount,
+        paidAt,
       },
     });
 
-    await materializeItemsAsReceipts(tx, id, items, productMap, supplierId, supplierName, req.session.user.id, paidAmount);
+    await materializeItemsAsReceipts(tx, id, items, productMap, supplierId, supplierName, req.session.user.id, paidAmount, paidAt);
 
     await tx.purchaseOrder.update({
       where: { id },
