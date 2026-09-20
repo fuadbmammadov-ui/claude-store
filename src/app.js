@@ -32,6 +32,8 @@ app.use(express.json());
 app.use(methodOverride('_method'));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+app.use('/health', require('./routes/health'));
+
 app.use(
   session({
     store: new pgSession({
@@ -95,8 +97,12 @@ function runStartupScript(scriptPath) {
 // Render-in build əmri konfiqurasiyası dəyişəndə "yadda saxlana" bilir və render.yaml-dakı
 // yeniləmələri avtomatik götürmür — ona görə seed/idxal skriptlərini burada, server açılan
 // zaman da işə salırıq. Hər ikisi idempotentdir (artıq işlənibsə heç nə etmir).
-runStartupScript('prisma/seed.js');
-runStartupScript('prisma/import-legacy.js');
+// Docker/Oracle üzərində bu artıq lazım deyil (build prosesi tam idarə olunur), ona görə
+// RUN_STARTUP_SCRIPTS env dəyişəni ilə idarə olunur.
+if (process.env.RUN_STARTUP_SCRIPTS === 'true') {
+  runStartupScript('prisma/seed.js');
+  runStartupScript('prisma/import-legacy.js');
+}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

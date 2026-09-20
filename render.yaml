@@ -1,3 +1,6 @@
+# AKTIV / PRIMARY DEPLOYMENT — bu konfiqurasiya hazırda canlı Render deployment-ini idarə edir.
+# Oracle Cloud üzərində paralel test aparılır (bax README-oracle-deploy.md), lakin Render
+# bu faylla işləməyə davam edir və toxunulmayıb. Dəyişiklik yoxdur, yalnız bu qeyd əlavə olunub.
 services:
   - type: web
     name: magaza-pos
@@ -16,3 +19,9 @@ services:
         sync: false
       - key: TELEGRAM_CHAT_ID
         sync: false
+      # src/app.js-də server açılışında seed/import-legacy skriptlərinin yenidən işə salınması
+      # bu flag-la idarə olunur. Render-in mövcud davranışını pozmamaq üçün "true" saxlanılıb —
+      # Render-in buildCommand-ı artıq bu skriptləri işlədir, server boot zamanı təkrar işə
+      # salınması əvvəlki kimi idempotent təhlükəsizlik qatı kimi davam edir.
+      - key: RUN_STARTUP_SCRIPTS
+        value: "true"

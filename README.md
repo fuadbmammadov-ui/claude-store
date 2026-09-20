@@ -21,6 +21,10 @@ Kiçik mağaza üçün satış, mal qəbulu, borc və kassa idarəetmə sistemi.
 
 Node.js + Express + EJS + PostgreSQL (Prisma ORM). Render.com üzərində deploy, Neon üzərində Postgres.
 
+> **Qeyd:** Hazırda Render+Neon quraşdırılması canlı və aktivdir (aşağıda). Paralel olaraq sistemin
+> Oracle Cloud üzərində Docker ilə işə salınması test edilir — bax [`README-oracle-deploy.md`](README-oracle-deploy.md).
+> Bu, Render-i əvəz etmək üçün hazırlıq mərhələsindədir, hələ keçid edilməyib.
+
 ## Lokal quraşdırma
 
 ```
