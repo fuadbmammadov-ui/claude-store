@@ -25,11 +25,13 @@ function monthRange(req) {
 router.get('/', (req, res) => res.redirect('/reports/daily'));
 
 router.get('/daily', asyncHandler(async (req, res) => {
-  const dateParam = req.query.date;
-  const day = dateParam ? new Date(dateParam) : new Date();
-  const from = new Date(day);
+  const fromParam = req.query.from || req.query.date;
+  const toParam = req.query.to || req.query.date;
+  const fromDay = fromParam ? new Date(fromParam) : new Date();
+  const toDay = toParam ? new Date(toParam) : fromDay;
+  const from = new Date(fromDay);
   from.setHours(0, 0, 0, 0);
-  const to = new Date(day);
+  const to = new Date(toDay);
   to.setHours(23, 59, 59, 999);
 
   const sales = await prisma.sale.findMany({
@@ -61,7 +63,8 @@ router.get('/daily', asyncHandler(async (req, res) => {
   const totalExpensesToday = expensesToday.reduce((s, e) => s + Number(e.amount), 0);
 
   res.render('reports/daily', {
-    day: from.toISOString().slice(0, 10),
+    from: from.toISOString().slice(0, 10),
+    to: to.toISOString().slice(0, 10),
     sales,
     totals,
     receiptsToday,

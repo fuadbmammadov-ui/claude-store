@@ -3,8 +3,18 @@
 <div class="container-fluid py-4">
   <h3>Günlük hesabat</h3>
   <%- include('_subnav', { active: 'daily' }) %>
-  <form method="get" class="mb-4" style="max-width: 250px;">
-    <input type="date" name="date" value="<%= day %>" class="form-control" onchange="this.form.submit()">
+  <form method="get" class="mb-4 d-flex align-items-end gap-2 flex-wrap">
+    <div>
+      <label class="form-label small text-muted mb-1">Başlanğıc</label>
+      <input type="date" name="from" value="<%= from %>" class="form-control" max="<%= to %>">
+    </div>
+    <div>
+      <label class="form-label small text-muted mb-1">Son</label>
+      <input type="date" name="to" value="<%= to %>" class="form-control" min="<%= from %>">
+    </div>
+    <div>
+      <button type="submit" class="btn btn-primary">Bax</button>
+    </div>
   </form>
 
   <div class="row g-3 mb-4">
@@ -16,8 +26,8 @@
     <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Qazanc (marja)</div><div class="fw-bold text-success"><%= money(totals.profit) %> ₼</div></div></div>
   </div>
   <div class="row g-3 mb-4">
-    <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Mal alışı (bugün)</div><div class="fw-bold"><%= money(totalPurchases) %> ₼</div></div></div>
-    <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Xərclər (bugün)</div><div class="fw-bold text-danger"><%= money(totalExpensesToday) %> ₼</div></div></div>
+    <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Mal alışı</div><div class="fw-bold"><%= money(totalPurchases) %> ₼</div></div></div>
+    <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Xərclər</div><div class="fw-bold text-danger"><%= money(totalExpensesToday) %> ₼</div></div></div>
   </div>
 
   <h5>Satışlar (çeklər) — məbləğə klikləyin, məhsulları görün</h5>
@@ -27,7 +37,7 @@
     <tbody>
       <% sales.forEach(s => { %>
       <tr>
-        <td><%= new Date(s.createdAt).toLocaleTimeString('az-AZ') %></td>
+        <td><%= new Date(s.createdAt).toLocaleString('az-AZ') %></td>
         <td><%= s.cashier.fullName %></td>
         <td><%= s.customer ? s.customer.name : '-' %></td>
         <td><%= paymentLabel(s.paymentType) %></td>
@@ -59,7 +69,7 @@
       </tr>
       <% }) %>
       <% if (!sales.length) { %>
-      <tr><td colspan="5" class="text-center text-muted">Bu tarixdə satış yoxdur</td></tr>
+      <tr><td colspan="5" class="text-center text-muted">Bu tarix aralığında satış yoxdur</td></tr>
       <% } %>
     </tbody>
   </table>
@@ -72,7 +82,7 @@
     <tbody>
       <% receiptsToday.forEach(r => { %>
       <tr>
-        <td><%= new Date(r.createdAt).toLocaleTimeString('az-AZ') %></td>
+        <td><%= new Date(r.createdAt).toLocaleString('az-AZ') %></td>
         <td><%= r.product.name %></td>
         <td><%= qty(r.quantity, r.product.unit) %></td>
         <td><%= money(r.purchasePrice) %> ₼</td>
@@ -81,7 +91,7 @@
       </tr>
       <% }) %>
       <% if (!receiptsToday.length) { %>
-      <tr><td colspan="6" class="text-center text-muted">Bu tarixdə mal qəbulu yoxdur</td></tr>
+      <tr><td colspan="6" class="text-center text-muted">Bu tarix aralığında mal qəbulu yoxdur</td></tr>
       <% } %>
     </tbody>
   </table>
@@ -94,14 +104,14 @@
     <tbody>
       <% expensesToday.forEach(e => { %>
       <tr>
-        <td><%= new Date(e.createdAt).toLocaleTimeString('az-AZ') %></td>
+        <td><%= new Date(e.createdAt).toLocaleString('az-AZ') %></td>
         <td><%= e.category %></td>
         <td><%= e.name %></td>
         <td><%= money(e.amount) %> ₼</td>
       </tr>
       <% }) %>
       <% if (!expensesToday.length) { %>
-      <tr><td colspan="4" class="text-center text-muted">Bu tarixdə xərc yoxdur</td></tr>
+      <tr><td colspan="4" class="text-center text-muted">Bu tarix aralığında xərc yoxdur</td></tr>
       <% } %>
     </tbody>
   </table>
