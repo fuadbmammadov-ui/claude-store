@@ -14,6 +14,7 @@
         <% if (currentUser && currentUser.role === 'ADMIN') { %>
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/expenses') ? 'active' : '' %>" href="/expenses"><i class="bi bi-receipt"></i> Xərclər</a></li>
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/suppliers') ? 'active' : '' %>" href="/suppliers"><i class="bi bi-truck"></i> Təchizatçılar</a></li>
+        <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/orders') ? 'active' : '' %>" href="/orders"><i class="bi bi-clipboard-check"></i> Sifarişlər</a></li>
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/reports') ? 'active' : '' %>" href="/reports"><i class="bi bi-bar-chart-line"></i> Hesabatlar</a></li>
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/users') ? 'active' : '' %>" href="/users"><i class="bi bi-person-gear"></i> İstifadəçilər</a></li>
         <% } else { %>

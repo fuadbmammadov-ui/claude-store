@@ -1,0 +1,139 @@
+<%- include('../partials/head', { title: order ? 'Sifariş #' + order.id : 'Yeni sifariş' }) %>
+<%- include('../partials/nav') %>
+
+<style>
+  .ord-app {
+    --ord-primary: #1E3A5F;
+    --ord-accent: #22C55E;
+    --ord-danger: #EF4444;
+    --ord-text: #111827;
+    --ord-text-secondary: #6B7280;
+    --ord-bg: #F5F7FA;
+    --ord-surface: #FFFFFF;
+    --ord-border: #E5E7EB;
+    --ord-radius: 14px;
+    --ord-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    background: var(--ord-bg);
+    color: var(--ord-text);
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    min-height: calc(100vh - 56px);
+  }
+  .ord-app * { box-sizing: border-box; }
+  .ord-left { width: 260px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; }
+  .ord-panel { background: var(--ord-surface); border-radius: var(--ord-radius); box-shadow: var(--ord-shadow); padding: 16px; }
+  .ord-search-box { display: flex; align-items: center; background: var(--ord-bg); border-radius: 12px; padding: 0 12px; height: 46px; border: 1.5px solid transparent; }
+  .ord-search-box:focus-within { border-color: var(--ord-primary); background: #fff; }
+  .ord-search-box input { flex: 1; border: none; background: transparent; font-size: 14px; outline: none; padding-left: 8px; min-width: 0; }
+  .ord-categories { display: flex; flex-direction: column; gap: 6px; max-height: 55vh; overflow-y: auto; }
+  .ord-cat-btn { height: 40px; border-radius: 10px; border: none; background: transparent; font-size: 13.5px; font-weight: 500; color: var(--ord-text); text-align: left; padding: 0 12px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ord-cat-btn:hover { background: #F1F5F9; }
+  .ord-cat-btn.active { background: var(--ord-primary); color: white; }
+
+  .ord-center { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+  .ord-products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .ord-product-card { background: var(--ord-surface); border-radius: var(--ord-radius); box-shadow: var(--ord-shadow); padding: 10px; cursor: pointer; border: 2px solid transparent; }
+  .ord-product-card:hover { border-color: var(--ord-primary); }
+  .ord-product-name { font-size: 13px; font-weight: 600; line-height: 1.3; margin-bottom: 6px; min-height: 34px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ord-product-price { font-size: 13px; color: var(--ord-text-secondary); }
+
+  .ord-right { width: 380px; flex-shrink: 0; background: var(--ord-surface); border-radius: var(--ord-radius); box-shadow: var(--ord-shadow); display: flex; flex-direction: column; }
+  .ord-cart-header { padding: 16px 18px 10px; border-bottom: 1px solid var(--ord-border); }
+  .ord-cart-items { flex: 1; overflow-y: auto; padding: 10px 14px; display: flex; flex-direction: column; gap: 10px; max-height: 50vh; }
+  .ord-cart-item { background: var(--ord-bg); border-radius: 12px; padding: 8px 10px; }
+  .ord-cart-item-name { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .ord-cart-item-row { display: flex; align-items: center; gap: 8px; }
+  .ord-cart-item-field { flex: 1; }
+  .ord-cart-item-field label { font-size: 10px; color: var(--ord-text-secondary); display: block; margin-bottom: 2px; }
+  .ord-cart-item-field input { width: 100%; height: 32px; border-radius: 7px; border: 1px solid var(--ord-border); text-align: center; font-size: 12.5px; }
+  .ord-cart-item-total { font-size: 12px; color: var(--ord-text-secondary); margin-top: 6px; text-align: right; }
+  .ord-cart-remove { width: 30px; height: 30px; border: none; background: transparent; color: var(--ord-danger); font-size: 16px; cursor: pointer; border-radius: 7px; flex-shrink: 0; align-self: flex-end; }
+  .ord-cart-remove:hover { background: #FEE2E2; }
+  .ord-empty-cart { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--ord-text-secondary); gap: 6px; padding: 30px; text-align: center; }
+  .ord-cart-footer { padding: 12px 16px 16px; border-top: 1px solid var(--ord-border); background: #FAFBFC; }
+  .ord-total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .ord-total-amount { font-size: 22px; font-weight: 800; color: var(--ord-accent); }
+
+  @media (max-width: 992px) {
+    .ord-app { flex-direction: column; }
+    .ord-left, .ord-center, .ord-right { width: 100%; }
+    .ord-categories { flex-direction: row; overflow-x: auto; max-height: none; }
+    .ord-cat-btn { flex-shrink: 0; }
+  }
+</style>
+
+<div class="ord-app">
+  <!-- LEFT -->
+  <div class="ord-left">
+    <div class="ord-panel">
+      <label class="form-label small text-muted mb-1">Təchizatçı</label>
+      <input type="text" id="ord-supplier" class="form-control" list="ord-supplier-list"
+             value="<%= order && order.supplier ? order.supplier.name : (order && order.supplierName ? order.supplierName : '') %>"
+             placeholder="Təchizatçı adı">
+      <datalist id="ord-supplier-list">
+        <% suppliers.forEach(s => { %><option value="<%= s.name %>"><% }) %>
+      </datalist>
+      <label class="form-label small text-muted mb-1 mt-2">Qeyd</label>
+      <input type="text" id="ord-note" class="form-control" value="<%= order ? (order.note || '') : '' %>" placeholder="Könüllü">
+    </div>
+    <div class="ord-panel" style="flex:1; display:flex; flex-direction:column; gap:12px; overflow:hidden;">
+      <div class="ord-search-box">
+        <span>🔍</span>
+        <input type="text" id="ord-search" placeholder="Mal axtar...">
+      </div>
+      <div class="ord-categories" id="ord-categories">
+        <button class="ord-cat-btn active" data-cat="all">Bütün mallar</button>
+        <% [...new Set(products.map(p => p.category))].sort((a,b)=>a.localeCompare(b,'az')).forEach(cat => { %>
+        <button class="ord-cat-btn" data-cat="<%= cat %>"><%= cat %></button>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div class="ord-center">
+    <div class="d-flex justify-content-between align-items-center">
+      <h5 id="ord-current-category" class="mb-0">Bütün mallar</h5>
+      <span class="text-muted small" id="ord-products-count"></span>
+    </div>
+    <div class="ord-products-grid" id="ord-products-grid"></div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="ord-right">
+    <div class="ord-cart-header">
+      <h5 class="mb-0"><%= order ? ('Sifariş #' + order.id) : 'Yeni sifariş' %></h5>
+      <span class="text-muted small" id="ord-cart-count">0 mal</span>
+    </div>
+    <div class="ord-cart-items" id="ord-cart-items">
+      <div class="ord-empty-cart" id="ord-empty-cart">
+        <div style="font-size:38px; opacity:.4;">📦</div>
+        <p class="mb-0">Sifariş siyahısı boşdur</p>
+        <p class="small">Soldan mal seçərək əlavə edin</p>
+      </div>
+    </div>
+    <div class="ord-cart-footer">
+      <div class="ord-total-row">
+        <span class="text-muted">Cəmi məbləğ</span>
+        <span class="ord-total-amount" id="ord-total-amount">0.00 ₼</span>
+      </div>
+      <div id="ord-error" class="text-danger small mb-2"></div>
+      <div class="d-grid gap-2">
+        <button class="btn btn-success" id="ord-confirm-btn">✓ Təsdiqlə və anbara qəbul et</button>
+        <button class="btn btn-outline-primary" id="ord-save-btn"><%= order ? 'Dəyişiklikləri yadda saxla' : 'Qaralama kimi yadda saxla' %></button>
+        <% if (order) { %>
+        <button class="btn btn-outline-danger btn-sm" id="ord-cancel-btn">Sifarişi ləğv et</button>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  window.ORDER_PRODUCTS = <%- JSON.stringify(products).replace(/</g, '\\u003c') %>;
+  window.ORDER_EXISTING_ITEMS = <%- JSON.stringify(items).replace(/</g, '\\u003c') %>;
+  window.ORDER_ID = <%= order ? order.id : 'null' %>;
+</script>
+<script src="/js/orders.js?v=<%= assetVersion %>"></script>
+<%- include('../partials/foot') %>
