@@ -1,5 +1,6 @@
 const PRODUCTS = window.ORDER_PRODUCTS || [];
-const ORDER_ID = window.ORDER_ID;
+let ORDER_ID = window.ORDER_ID;
+const ORDER_STATUS = window.ORDER_STATUS || 'DRAFT';
 
 let cart = (window.ORDER_EXISTING_ITEMS || []).map((it) => ({
   productId: it.productId,
@@ -20,6 +21,10 @@ const cartItemsBox = document.getElementById('ord-cart-items');
 const cartCountEl = document.getElementById('ord-cart-count');
 const totalAmountEl = document.getElementById('ord-total-amount');
 const errorEl = document.getElementById('ord-error');
+const saveStatusEl = document.getElementById('ord-save-status');
+const supplierInput = document.getElementById('ord-supplier');
+const noteInput = document.getElementById('ord-note');
+const paidAmountInput = document.getElementById('ord-paid-amount');
 
 function money(n) {
   return Number(n || 0).toLocaleString('az-AZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -59,17 +64,18 @@ function addToCart(id) {
   const existing = cart.find((c) => c.productId === product.id);
   if (existing) {
     if (product.unit !== 'KG') existing.quantity += 1;
-    return;
+  } else {
+    cart.push({
+      productId: product.id,
+      name: product.name,
+      category: product.category,
+      unit: product.unit,
+      quantity: product.unit === 'KG' ? 0 : 1,
+      purchasePrice: Number(product.purchasePrice),
+    });
   }
-  cart.push({
-    productId: product.id,
-    name: product.name,
-    category: product.category,
-    unit: product.unit,
-    quantity: product.unit === 'KG' ? 0 : 1,
-    purchasePrice: Number(product.purchasePrice),
-  });
   renderCart();
+  scheduleAutosave();
 }
 
 function renderCart() {
@@ -117,17 +123,20 @@ function updateQty(idx, value) {
   const q = parseFloat(value);
   cart[idx].quantity = isNaN(q) || q < 0 ? 0 : q;
   renderCart();
+  scheduleAutosave();
 }
 
 function updatePrice(idx, value) {
   const p = parseFloat(value);
   cart[idx].purchasePrice = isNaN(p) || p < 0 ? 0 : p;
   renderCart();
+  scheduleAutosave();
 }
 
 function removeItem(idx) {
   cart.splice(idx, 1);
   renderCart();
+  scheduleAutosave();
 }
 
 categoriesBox.addEventListener('click', (e) => {
@@ -140,77 +149,86 @@ categoriesBox.addEventListener('click', (e) => {
 });
 
 searchInput.addEventListener('input', renderProducts);
+supplierInput.addEventListener('change', scheduleAutosave);
+noteInput.addEventListener('change', scheduleAutosave);
+if (paidAmountInput) paidAmountInput.addEventListener('change', scheduleAutosave);
 
 function buildPayload() {
-  return {
-    supplierName: document.getElementById('ord-supplier').value.trim(),
-    note: document.getElementById('ord-note').value.trim(),
+  const payload = {
+    supplierName: supplierInput.value.trim(),
+    note: noteInput.value.trim(),
     items: cart.filter((c) => c.quantity > 0).map((c) => ({
       productId: c.productId,
       quantity: c.quantity,
       purchasePrice: c.purchasePrice,
     })),
   };
+  if (paidAmountInput) {
+    const p = parseFloat(paidAmountInput.value);
+    payload.paidAmount = isNaN(p) || p < 0 ? 0 : p;
+  }
+  return payload;
 }
 
-async function saveDraft() {
+let autosaveTimer = null;
+
+function scheduleAutosave() {
   errorEl.textContent = '';
+  if (autosaveTimer) clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(persistDraft, 600);
+}
+
+// Saves the current basket to the server as-is. Never confirms — confirming
+// only ever happens from the explicit "Təsdiqlə" button.
+async function persistDraft() {
   const payload = buildPayload();
+
+  if (!ORDER_ID && payload.items.length === 0) {
+    return; // nothing to persist yet
+  }
+
+  saveStatusEl.textContent = 'Yadda saxlanılır...';
   try {
-    if (ORDER_ID) {
+    if (!ORDER_ID) {
+      const resp = await fetch('/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await resp.json();
+      if (!resp.ok) { errorEl.textContent = data.error || 'Xəta baş verdi'; saveStatusEl.textContent = ''; return; }
+      ORDER_ID = data.id;
+      window.history.replaceState(null, '', '/orders/' + ORDER_ID);
+    } else {
       const resp = await fetch('/orders/' + ORDER_ID, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       const data = await resp.json();
-      if (!resp.ok) { errorEl.textContent = data.error || 'Xəta baş verdi'; return; }
-      window.location.reload();
-    } else {
-      const form = document.createElement('form');
-      form.method = 'post';
-      form.action = '/orders';
-      const fields = { supplierName: payload.supplierName, note: payload.note };
-      Object.entries(fields).forEach(([k, v]) => {
-        const input = document.createElement('input');
-        input.type = 'hidden'; input.name = k; input.value = v;
-        form.appendChild(input);
-      });
-      payload.items.forEach((item, i) => {
-        ['productId', 'quantity', 'purchasePrice'].forEach((key) => {
-          const input = document.createElement('input');
-          input.type = 'hidden'; input.name = `items[${i}][${key}]`; input.value = item[key];
-          form.appendChild(input);
-        });
-      });
-      document.body.appendChild(form);
-      form.submit();
+      if (!resp.ok) { errorEl.textContent = data.error || 'Xəta baş verdi'; saveStatusEl.textContent = ''; return; }
     }
+    const now = new Date();
+    saveStatusEl.textContent = 'Yadda saxlanıldı · ' + now.toLocaleTimeString('az-AZ');
   } catch (err) {
-    errorEl.textContent = 'Şəbəkə xətası';
+    saveStatusEl.textContent = '';
+    errorEl.textContent = 'Şəbəkə xətası — dəyişiklik yadda saxlanmadı';
   }
 }
 
 async function confirmOrder() {
   errorEl.textContent = '';
+  if (autosaveTimer) clearTimeout(autosaveTimer);
+
   const payload = buildPayload();
   if (!payload.items.length) { errorEl.textContent = 'Siyahıda mal yoxdur'; return; }
   if (!confirm('Sifariş təsdiqlənsin? Mallar anbara əlavə olunacaq və təchizatçı adına borc yaranacaq.')) return;
 
-  try {
-    let orderId = ORDER_ID;
-    if (!orderId) {
-      const createResp = await fetch('/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const createData = await createResp.json();
-      if (!createResp.ok) { errorEl.textContent = createData.error || 'Xəta baş verdi'; return; }
-      orderId = createData.id;
-    }
+  await persistDraft();
+  if (!ORDER_ID) { errorEl.textContent = 'Sifariş yadda saxlanmadı, yenidən cəhd edin'; return; }
 
-    const resp = await fetch('/orders/' + orderId + '/confirm', {
+  try {
+    const resp = await fetch('/orders/' + ORDER_ID + '/confirm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -223,13 +241,16 @@ async function confirmOrder() {
   }
 }
 
-document.getElementById('ord-save-btn').addEventListener('click', saveDraft);
-document.getElementById('ord-confirm-btn').addEventListener('click', confirmOrder);
+const confirmBtn = document.getElementById('ord-confirm-btn');
+if (confirmBtn) confirmBtn.addEventListener('click', confirmOrder);
 
 const cancelBtn = document.getElementById('ord-cancel-btn');
 if (cancelBtn) {
   cancelBtn.addEventListener('click', async () => {
-    if (!confirm('Sifariş ləğv edilsin?')) return;
+    const msg = ORDER_STATUS === 'CONFIRMED'
+      ? 'Sifariş ləğv edilsin? Anbara əlavə olunan mallar geri götürüləcək və təchizatçı borcu silinəcək.'
+      : 'Sifariş ləğv edilsin?';
+    if (!confirm(msg)) return;
     const form = document.createElement('form');
     form.method = 'post';
     form.action = '/orders/' + ORDER_ID + '/cancel';

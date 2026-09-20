@@ -4,8 +4,7 @@
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>
       Sifariş #<%= order.id %>
-      <% if (order.status === 'CONFIRMED') { %><span class="badge bg-success">Təsdiqlənib</span>
-      <% } else { %><span class="badge bg-danger">Ləğv edilib</span><% } %>
+      <span class="badge bg-danger">Ləğv edilib</span>
     </h3>
     <a href="/orders" class="btn btn-outline-secondary btn-sm">← Sifarişlər</a>
   </div>
@@ -13,8 +12,8 @@
   <div class="row g-3 mb-4">
     <div class="col-md-3"><div class="card p-3"><div class="text-muted small">Təchizatçı</div><div class="fw-bold"><%= order.supplier ? order.supplier.name : (order.supplierName || '-') %></div></div></div>
     <div class="col-md-3"><div class="card p-3"><div class="text-muted small">Yaradan</div><div class="fw-bold"><%= order.createdBy.fullName %></div></div></div>
-    <% if (order.status === 'CONFIRMED') { %>
-    <div class="col-md-3"><div class="card p-3"><div class="text-muted small">Təsdiqləyən</div><div class="fw-bold"><%= order.confirmedBy ? order.confirmedBy.fullName : '-' %></div></div></div>
+    <% if (order.confirmedAt) { %>
+    <div class="col-md-3"><div class="card p-3"><div class="text-muted small">Əvvəlcə təsdiqləyən</div><div class="fw-bold"><%= order.confirmedBy ? order.confirmedBy.fullName : '-' %></div></div></div>
     <div class="col-md-3"><div class="card p-3"><div class="text-muted small">Təsdiq tarixi</div><div class="fw-bold"><%= new Date(order.confirmedAt).toLocaleString('az-AZ') %></div></div></div>
     <% } %>
   </div>
@@ -42,8 +41,8 @@
   </table>
   </div>
 
-  <% if (order.status === 'CONFIRMED') { %>
-  <p class="text-muted small">Bu sifariş təsdiqləndikdə mallar anbara əlavə olundu və təchizatçı adına borc yarandı.</p>
+  <% if (order.confirmedAt) { %>
+  <p class="text-muted small">Bu sifariş əvvəllər təsdiqlənmişdi, sonra ləğv edilib — anbara əlavə olunmuş mallar geri götürülüb və təchizatçı borcu silinib.</p>
   <% } %>
 </div>
 <%- include('../partials/foot') %>
