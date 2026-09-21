@@ -178,7 +178,8 @@ function renderCart() {
       ? `<input type="number" step="0.001" min="0" class="pos-qty-kg-input" value="${item.quantity}" onchange="updateQty(${idx}, this.value)">`
       : `<div class="pos-qty-control">
           <button class="pos-qty-btn" onclick="changeQty(${idx}, -1)">−</button>
-          <span class="pos-qty-value">${item.quantity}</span>
+          <input type="number" step="1" min="0" inputmode="numeric" class="pos-qty-input" value="${item.quantity}"
+            onchange="updateQty(${idx}, this.value)" onclick="this.select()">
           <button class="pos-qty-btn" onclick="changeQty(${idx}, 1)">+</button>
         </div>`;
 
@@ -220,8 +221,15 @@ function changeQty(idx, delta) {
 }
 
 function updateQty(idx, value) {
-  const q = parseFloat(value);
-  cart[idx].quantity = isNaN(q) || q < 0 ? 0 : q;
+  const item = cart[idx];
+  let q = parseFloat(value);
+  if (isNaN(q) || q < 0) q = 0;
+  if (q > item.maxQuantity) {
+    showToast('Stok kifayət etmir');
+    q = item.maxQuantity;
+  }
+  if (q <= 0) { removeItem(idx); return; }
+  item.quantity = q;
   renderCart();
 }
 
