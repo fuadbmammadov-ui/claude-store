@@ -153,6 +153,35 @@ router.get('/trends', asyncHandler(async (req, res) => {
   const dailyLabels = [...dayBuckets.keys()].map((k) => k.slice(5).split('-').reverse().join('.'));
   const dailyValues = [...dayBuckets.values()];
 
+  // Gündəlik net gəlir gedişatı - son 30 gün (satış qazancı - həmin ayın gündəlik xərc payı)
+  const dailyItems = await prisma.saleItem.findMany({
+    where: { sale: { createdAt: { gte: dayFrom }, voided: false } },
+    select: { lineTotal: true, purchasePrice: true, quantity: true, sale: { select: { createdAt: true } } },
+  });
+
+  const dayNetBuckets = new Map();
+  for (const key of dayBuckets.keys()) dayNetBuckets.set(key, 0);
+  dailyItems.forEach((it) => {
+    const key = localDateKey(it.sale.createdAt);
+    if (!dayNetBuckets.has(key)) return;
+    const grossProfit = Number(it.lineTotal) - Number(it.purchasePrice) * Number(it.quantity);
+    dayNetBuckets.set(key, dayNetBuckets.get(key) + grossProfit);
+  });
+
+  const expenseCache = new Map();
+  for (const key of dayNetBuckets.keys()) {
+    const [y, m] = key.split('-').map(Number);
+    const cacheKey = `${y}-${m}`;
+    if (!expenseCache.has(cacheKey)) {
+      // eslint-disable-next-line no-await-in-loop
+      const { total } = await getMonthlyExpenseBreakdown(prisma, y, m);
+      const daysInThatMonth = new Date(y, m, 0).getDate();
+      expenseCache.set(cacheKey, total / daysInThatMonth);
+    }
+    dayNetBuckets.set(key, dayNetBuckets.get(key) - expenseCache.get(cacheKey));
+  }
+  const dailyNetValues = [...dayNetBuckets.values()];
+
   // Aylıq gedişat - son 12 ay
   const MONTHS = 12;
   const monthNames = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'İyn', 'İyl', 'Avq', 'Sen', 'Okt', 'Noy', 'Dek'];
@@ -243,7 +272,7 @@ router.get('/trends', asyncHandler(async (req, res) => {
     .slice(0, 5);
 
   res.render('reports/trends', {
-    dailyLabels, dailyValues,
+    dailyLabels, dailyValues, dailyNetValues,
     monthlyLabels, monthlyValues,
     monthToDateRevenue, daysElapsed, daysInMonth,
     dailyRunRate, projectedMonthRevenue, annualRunRate,

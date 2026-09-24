@@ -54,6 +54,17 @@
     </div>
     <div class="col-lg-6">
       <div class="viz-card">
+        <div class="viz-title">Gündəlik net gəlir gedişatı (son 30 gün)</div>
+        <div class="viz-chart-wrap" style="height:260px;">
+          <canvas id="chartDailyNet"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-lg-6">
+      <div class="viz-card">
         <div class="viz-title">Aylıq satış gedişatı (son 12 ay)</div>
         <div class="viz-chart-wrap" style="height:260px;">
           <canvas id="chartMonthly"></canvas>
@@ -138,6 +149,41 @@
       },
       interaction: { mode: 'index', intersect: false },
       scales: baseScales,
+    },
+  });
+
+  // Gündəlik net gəlir - line
+  var dailyNetValues = <%- JSON.stringify(dailyNetValues) %>;
+  new Chart(document.getElementById('chartDailyNet'), {
+    type: 'line',
+    data: {
+      labels: <%- JSON.stringify(dailyLabels) %>,
+      datasets: [{
+        data: dailyNetValues,
+        borderColor: SERIES.aqua,
+        backgroundColor: 'rgba(27,175,122,0.08)',
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        pointHoverBackgroundColor: SERIES.aqua,
+        tension: 0.25,
+        fill: true,
+      }],
+    },
+    options: {
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function (ctx) { return fmt(ctx.parsed.y); } } },
+      },
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: baseScales.x,
+        y: {
+          grid: { color: GRID },
+          border: { display: false },
+          ticks: { color: INK_MUTED, font: { size: 11 }, callback: function (v) { return moneyFmt.format(v); } },
+        },
+      },
     },
   });
 
