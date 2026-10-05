@@ -165,6 +165,7 @@ async function main() {
         unit,
         purchasePrice: round2(purchasePrice),
         salePrice: round2(salePrice),
+        wholesalePrice: round2(purchasePrice * 1.15),
         quantity: 0,
         minStock,
         active: toActive(p.active),

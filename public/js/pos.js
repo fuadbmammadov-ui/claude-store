@@ -5,6 +5,7 @@ let cart = [];
 let currentCategory = 'all';
 let selectedCustomerId = null;
 let currentPaymentType = null;
+let currentPriceMode = 'RETAIL';
 let lastSaleId = null;
 
 const searchInput = document.getElementById('pos-search');
@@ -51,6 +52,35 @@ function findProductByBarcode(code) {
   return PRODUCTS.find((p) => p.barcode === code);
 }
 
+function priceForMode(product, mode) {
+  if (mode === 'WHOLESALE') return Number(product.wholesalePrice);
+  if (mode === 'COST') return Number(product.purchasePrice);
+  return Number(product.salePrice);
+}
+
+function setPriceMode(mode) {
+  currentPriceMode = mode;
+  cart.forEach((item) => {
+    const product = findProduct(item.productId);
+    if (product) item.unitPrice = priceForMode(product, mode);
+  });
+
+  document.querySelectorAll('.pos-price-mode-btn').forEach((b) => b.classList.toggle('active', b.dataset.mode === mode));
+  const banner = document.getElementById('pos-price-mode-banner');
+  if (banner) {
+    if (mode === 'RETAIL') {
+      banner.style.display = 'none';
+    } else {
+      banner.style.display = 'block';
+      banner.textContent = mode === 'WHOLESALE' ? '⚠ Topdan satış qiyməti aktivdir' : '⚠ Maya qiymətinə satış aktivdir';
+    }
+  }
+
+  renderCart();
+  renderProducts();
+  renderFavorites();
+}
+
 function showToast(msg) {
   const t = document.getElementById('pos-toast');
   t.textContent = msg;
@@ -70,7 +100,7 @@ function renderFavorites() {
       <div class="pos-fav-card ${out ? 'disabled' : ''}" onclick="addToCart(${p.id})">
         <div class="emoji">${categoryEmoji(p.category)}</div>
         <div class="name">${escapeHtml(p.name)}</div>
-        <div class="price">${money(p.salePrice)} ₼</div>
+        <div class="price">${money(priceForMode(p, currentPriceMode))} ₼</div>
       </div>`;
   }).join('');
 }
@@ -103,7 +133,7 @@ function renderProducts() {
         <div class="pos-product-img">${categoryEmoji(p.category)}</div>
         <div class="pos-product-name">${escapeHtml(p.name)}</div>
         <div class="pos-product-footer">
-          <span class="pos-product-price">${money(p.salePrice)} ₼</span>
+          <span class="pos-product-price">${money(priceForMode(p, currentPriceMode))} ₼</span>
           <span class="pos-stock-badge ${badgeClass}">${badgeText}</span>
         </div>
       </div>`;
@@ -144,7 +174,7 @@ function addToCart(id) {
       name: product.name,
       category: product.category,
       unit: product.unit,
-      unitPrice: Number(product.salePrice),
+      unitPrice: priceForMode(product, currentPriceMode),
       discount: 0,
       quantity: product.unit === 'KG' ? 0 : 1,
       maxQuantity: Number(product.quantity),
@@ -283,7 +313,8 @@ async function lookupAndAddByBarcode(code) {
     if (!resp.ok) { scanError.textContent = data.error || 'Mal tapılmadı'; return false; }
     PRODUCTS.push({
       id: data.id, name: data.name, barcode: data.barcode, category: data.category || 'Digər',
-      unit: data.unit, salePrice: Number(data.salePrice), quantity: Number(data.quantity),
+      unit: data.unit, salePrice: Number(data.salePrice), wholesalePrice: Number(data.wholesalePrice),
+      purchasePrice: Number(data.purchasePrice), quantity: Number(data.quantity),
       minStock: data.minStock !== null && data.minStock !== undefined ? Number(data.minStock) : null,
     });
     addToCart(data.id);
@@ -322,7 +353,7 @@ function openPayModal(type) {
 
   const titles = { CASH: 'Nağd ödəniş', CARD: 'Kartla ödəniş', TRANSFER: 'Köçürmə ilə ödəniş', DEBT: 'Borca yazılır' };
   document.getElementById('pay-modal-title').textContent = titles[type];
-  document.getElementById('customer-section').style.display = type === 'DEBT' ? 'block' : 'none';
+  document.getElementById('customer-section').style.display = (type === 'DEBT' || currentPriceMode !== 'RETAIL') ? 'block' : 'none';
 
   const modal = new bootstrap.Modal(document.getElementById('pay-modal'));
   modal.show();
@@ -366,9 +397,12 @@ async function submitCheckout() {
     unitPrice: c.unitPrice,
     discount: c.discount || 0,
   }));
-  const payload = { items, paymentType: currentPaymentType, note: document.getElementById('sale-note').value };
+  const payload = {
+    items, paymentType: currentPaymentType, priceMode: currentPriceMode,
+    note: document.getElementById('sale-note').value,
+  };
 
-  if (currentPaymentType === 'DEBT') {
+  if (currentPaymentType === 'DEBT' || currentPriceMode !== 'RETAIL') {
     if (selectedCustomerId) {
       payload.customerId = selectedCustomerId;
     } else {
@@ -402,9 +436,7 @@ async function submitCheckout() {
 
     cart = [];
     document.getElementById('sale-note').value = '';
-    renderCart();
-    renderProducts();
-    renderFavorites();
+    setPriceMode('RETAIL');
 
     lastSaleId = data.saleId;
     document.getElementById('success-receipt-no').textContent = '#' + data.saleId;

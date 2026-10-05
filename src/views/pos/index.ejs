@@ -126,6 +126,18 @@
   }
   .pos-cart-header h2 { font-size: 16px; font-weight: 700; margin: 0; }
   .pos-cart-count { background: var(--pos-primary); color: white; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+  .pos-price-mode-row { display: flex; gap: 6px; padding: 10px 14px 0; flex-shrink: 0; }
+  .pos-price-mode-btn {
+    flex: 1; height: 34px; border-radius: 8px; border: 1.5px solid var(--pos-border); background: var(--pos-surface);
+    font-size: 12px; font-weight: 600; color: var(--pos-text-secondary); cursor: pointer; transition: 0.15s;
+  }
+  .pos-price-mode-btn:hover { border-color: var(--pos-primary); }
+  .pos-price-mode-btn.active { background: var(--pos-warning); border-color: var(--pos-warning); color: white; }
+  .pos-price-mode-btn.active[data-mode="RETAIL"] { background: var(--pos-primary); border-color: var(--pos-primary); }
+  .pos-price-mode-banner {
+    margin: 8px 14px 0; padding: 6px 10px; border-radius: 8px; background: #FEF3C7; color: #92400E;
+    font-size: 12px; font-weight: 700; text-align: center; flex-shrink: 0;
+  }
   .pos-cart-items { flex: 1; overflow-y: auto; padding: 10px 14px; display: flex; flex-direction: column; gap: 10px; }
   .pos-cart-item { background: var(--pos-bg); border-radius: 12px; padding: 8px 10px; }
   .pos-cart-item-row { display: flex; align-items: center; gap: 10px; }
@@ -285,6 +297,13 @@
       <h2>Cari satış</h2>
       <span class="pos-cart-count" id="pos-cart-count">0</span>
     </div>
+
+    <div class="pos-price-mode-row">
+      <button type="button" class="pos-price-mode-btn active" data-mode="RETAIL" onclick="setPriceMode('RETAIL')">Pərakəndə</button>
+      <button type="button" class="pos-price-mode-btn" data-mode="WHOLESALE" onclick="setPriceMode('WHOLESALE')">Topdan</button>
+      <button type="button" class="pos-price-mode-btn" data-mode="COST" onclick="setPriceMode('COST')">Maya qiyməti</button>
+    </div>
+    <div id="pos-price-mode-banner" class="pos-price-mode-banner" style="display:none;"></div>
 
     <div class="pos-cart-items" id="pos-cart-items">
       <div class="pos-empty-cart" id="pos-empty-cart">

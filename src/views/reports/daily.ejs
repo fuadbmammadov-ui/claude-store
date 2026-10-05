@@ -41,7 +41,11 @@
         <td><%= new Date(s.createdAt).toLocaleString('az-AZ') %></td>
         <td><%= s.cashier.fullName %></td>
         <td><%= s.customer ? s.customer.name : '-' %></td>
-        <td><%= paymentLabel(s.paymentType) %></td>
+        <td>
+          <%= paymentLabel(s.paymentType) %>
+          <% if (s.priceMode === 'WHOLESALE') { %><span class="badge bg-warning text-dark">Topdan</span><% } %>
+          <% if (s.priceMode === 'COST') { %><span class="badge bg-warning text-dark">Maya</span><% } %>
+        </td>
         <td>
           <a href="#" role="button" class="link-primary fw-bold text-decoration-none"
              data-bs-toggle="collapse" data-bs-target="#sale-items-<%= s.id %>"

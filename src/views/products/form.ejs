@@ -42,11 +42,16 @@
     <div class="row">
       <div class="col mb-3">
         <label class="form-label">Alış qiyməti (₼)</label>
-        <input type="number" step="0.01" min="0" name="purchasePrice" class="form-control" value="<%= product ? product.purchasePrice : '' %>" required>
+        <input type="number" step="0.01" min="0" name="purchasePrice" id="purchasePrice" class="form-control" value="<%= product ? product.purchasePrice : '' %>" required>
       </div>
       <div class="col mb-3">
         <label class="form-label">Satış qiyməti (₼)</label>
         <input type="number" step="0.01" min="0" name="salePrice" class="form-control" value="<%= product ? product.salePrice : '' %>" required>
+      </div>
+      <div class="col mb-3">
+        <label class="form-label">Topdan satış qiyməti (₼)</label>
+        <input type="number" step="0.01" min="0" name="wholesalePrice" id="wholesalePrice" class="form-control" value="<%= product ? product.wholesalePrice : '' %>" required>
+        <% if (!product) { %><div class="form-text">Defolt: alış qiyməti + 15%, istəsəniz dəyişin.</div><% } %>
       </div>
     </div>
     <% if (product) { %>
@@ -80,5 +85,20 @@
     </div>
     <button type="submit" class="btn btn-primary">Yadda saxla</button>
   </form>
+  <% if (!product) { %>
+  <script>
+    (function () {
+      var purchaseInput = document.getElementById('purchasePrice');
+      var wholesaleInput = document.getElementById('wholesalePrice');
+      var wholesaleTouched = false;
+      wholesaleInput.addEventListener('input', function () { wholesaleTouched = true; });
+      purchaseInput.addEventListener('input', function () {
+        if (wholesaleTouched) return;
+        var p = parseFloat(purchaseInput.value);
+        wholesaleInput.value = isNaN(p) ? '' : Math.round(p * 1.15 * 100) / 100;
+      });
+    })();
+  </script>
+  <% } %>
 </div>
 <%- include('../partials/foot') %>

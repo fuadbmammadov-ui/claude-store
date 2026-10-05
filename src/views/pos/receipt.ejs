@@ -30,6 +30,9 @@
     Ödəniş növü:
     <%= sale.paymentType === 'CASH' ? 'Nağd' : sale.paymentType === 'CARD' ? 'Kart' : sale.paymentType === 'TRANSFER' ? 'Köçürmə' : 'Borc' %>
   </p>
+  <% if (sale.priceMode && sale.priceMode !== 'RETAIL') { %>
+  <p class="text-end fw-bold"><%= sale.priceMode === 'WHOLESALE' ? 'Topdan satış' : 'Maya qiymətinə satış' %></p>
+  <% } %>
   <% if (sale.note) { %>
   <p class="text-muted small">Qeyd: <%= sale.note %></p>
   <% } %>

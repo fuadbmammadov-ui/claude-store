@@ -9,7 +9,7 @@
       <p class="text-muted mb-1">Kateqoriya: <%= product.category %><% if (product.subCategory) { %> / <%= product.subCategory %><% } %></p>
       <% } %>
       <p>Qalıq: <strong><%= qty(product.quantity, product.unit) %> <%= product.unit === 'KG' ? 'kq' : 'ədəd' %></strong></p>
-      <p>Alış: <%= money(product.purchasePrice) %> ₼ &nbsp;|&nbsp; Satış: <%= money(product.salePrice) %> ₼</p>
+      <p>Alış: <%= money(product.purchasePrice) %> ₼ &nbsp;|&nbsp; Satış: <%= money(product.salePrice) %> ₼ &nbsp;|&nbsp; Topdan: <%= money(product.wholesalePrice) %> ₼</p>
     </div>
     <div class="text-end d-flex flex-wrap gap-2 justify-content-end">
       <a href="/products/<%= product.id %>/receive" class="btn btn-success">Mal qəbulu</a>

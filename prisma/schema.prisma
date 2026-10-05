@@ -30,6 +30,12 @@ enum SaleStatus {
   DEBT
 }
 
+enum PriceMode {
+  RETAIL
+  WHOLESALE
+  COST
+}
+
 enum ReceiptStatus {
   PAID
   DEBT
@@ -69,6 +75,7 @@ model Product {
   unit              Unit           @default(PIECE)
   purchasePrice     Decimal        @db.Decimal(12, 2)
   salePrice         Decimal        @db.Decimal(12, 2)
+  wholesalePrice    Decimal        @db.Decimal(12, 2)
   quantity          Decimal        @db.Decimal(12, 3)
   minStock          Decimal?       @db.Decimal(12, 3)
   active            Boolean        @default(true)
@@ -240,6 +247,7 @@ model Sale {
   cashier      User          @relation("SaleCashier", fields: [cashierId], references: [id])
   cashierId    Int
   paymentType  PaymentType
+  priceMode    PriceMode     @default(RETAIL)
   totalAmount  Decimal       @db.Decimal(12, 2)
   paidAmount   Decimal       @db.Decimal(12, 2)
   status       SaleStatus

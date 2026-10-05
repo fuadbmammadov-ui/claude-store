@@ -17,11 +17,12 @@ function saleNotificationText(sale) {
     .map((it) => `• ${it.productName} ${qty(it.quantity, it.unit)} x ${money(it.unitPrice)} ₼ = ${money(it.lineTotal)} ₼`)
     .join('\n');
   const customerLine = sale.customer ? `\nMüştəri: ${sale.customer.name}` : '';
+  const priceModeLabel = sale.priceMode === 'WHOLESALE' ? ' (Topdan satış)' : sale.priceMode === 'COST' ? ' (Maya qiymətinə satış)' : '';
 
   return (
     `🛒 Yeni satış #${sale.id} (${time})\n` +
     `Satıcı: ${sale.cashier.fullName}\n` +
-    `Ödəniş: ${paymentLabel(sale.paymentType)}${customerLine}\n\n` +
+    `Ödəniş: ${paymentLabel(sale.paymentType)}${priceModeLabel}${customerLine}\n\n` +
     `${itemLines}\n\n` +
     `Cəmi: ${money(sale.totalAmount)} ₼`
   );
@@ -72,6 +73,8 @@ router.get('/', asyncHandler(async (req, res) => {
     category: p.category || 'Digər',
     unit: p.unit,
     salePrice: Number(p.salePrice),
+    wholesalePrice: Number(p.wholesalePrice),
+    purchasePrice: Number(p.purchasePrice),
     quantity: Number(p.quantity),
     minStock: p.minStock !== null ? Number(p.minStock) : null,
   }));
@@ -122,7 +125,7 @@ function round2(n) {
 
 router.post('/checkout', async (req, res) => {
   try {
-    const { items, paymentType, customerId, customerName, customerPhone, note } = req.body;
+    const { items, paymentType, priceMode, customerId, customerName, customerPhone, note } = req.body;
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Səbət boşdur' });
@@ -130,13 +133,16 @@ router.post('/checkout', async (req, res) => {
     if (!['CASH', 'CARD', 'TRANSFER', 'DEBT'].includes(paymentType)) {
       return res.status(400).json({ error: 'Ödəniş növü yanlışdır' });
     }
-    if (paymentType === 'DEBT' && !customerId && !(customerName && customerName.trim())) {
-      return res.status(400).json({ error: 'Borca yazmaq üçün müştəri seçin və ya əlavə edin' });
+    const resolvedPriceMode = ['RETAIL', 'WHOLESALE', 'COST'].includes(priceMode) ? priceMode : 'RETAIL';
+    const customerRequired = paymentType === 'DEBT' || resolvedPriceMode !== 'RETAIL';
+    if (customerRequired && !customerId && !(customerName && customerName.trim())) {
+      const reason = paymentType === 'DEBT' ? 'Borca yazmaq' : 'Topdan/maya qiymətinə satış';
+      return res.status(400).json({ error: `${reason} üçün müştəri seçin və ya əlavə edin` });
     }
 
     const result = await prisma.$transaction(async (tx) => {
       let resolvedCustomerId = customerId ? Number(customerId) : null;
-      if (!resolvedCustomerId && paymentType === 'DEBT') {
+      if (!resolvedCustomerId && customerRequired && customerName && customerName.trim()) {
         const customer = await tx.customer.create({
           data: { name: customerName.trim(), phone: (customerPhone || '').trim() || null },
         });
@@ -190,6 +196,7 @@ router.post('/checkout', async (req, res) => {
           customerId: resolvedCustomerId,
           cashierId: req.session.user.id,
           paymentType,
+          priceMode: resolvedPriceMode,
           totalAmount,
           paidAmount,
           status,
