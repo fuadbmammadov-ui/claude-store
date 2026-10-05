@@ -22,6 +22,45 @@ function monthRange(req) {
   return { year, month, from, to, daysInMonth };
 }
 
+function getIsoWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+function isoWeekRange(year, week) {
+  const simple = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7));
+  const dow = simple.getUTCDay() || 7;
+  const from = new Date(simple);
+  from.setUTCDate(simple.getUTCDate() - dow + 1);
+  from.setUTCHours(0, 0, 0, 0);
+  const to = new Date(from);
+  to.setUTCDate(from.getUTCDate() + 7);
+  return { from, to };
+}
+
+function parseIsoWeekParam(w) {
+  const m = /^(\d{4})-W(\d{2})$/.exec(w || '');
+  if (!m) return null;
+  return { year: Number(m[1]), week: Number(m[2]) };
+}
+
+// Unifies month- and week-based report filtering behind one query param set.
+function periodRange(req) {
+  const period = req.query.period === 'week' ? 'week' : 'month';
+  if (period === 'week') {
+    const now = new Date();
+    const parsed = parseIsoWeekParam(req.query.w) || { year: now.getFullYear(), week: getIsoWeek(now) };
+    const { from, to } = isoWeekRange(parsed.year, parsed.week);
+    const wValue = `${parsed.year}-W${String(parsed.week).padStart(2, '0')}`;
+    return { period, year: parsed.year, week: parsed.week, wValue, from, to };
+  }
+  const { year, month, from, to, daysInMonth } = monthRange(req);
+  return { period, year, month, from, to, daysInMonth };
+}
+
 router.get('/', (req, res) => res.redirect('/reports/daily'));
 
 router.get('/daily', asyncHandler(async (req, res) => {
@@ -281,7 +320,7 @@ router.get('/trends', asyncHandler(async (req, res) => {
 }));
 
 router.get('/products', asyncHandler(async (req, res) => {
-  const { year, month, from, to } = monthRange(req);
+  const { period, year, month, week, wValue, from, to } = periodRange(req);
 
   const saleItems = await prisma.saleItem.findMany({ where: { sale: { createdAt: { gte: from, lt: to }, voided: false } } });
 
@@ -299,11 +338,11 @@ router.get('/products', asyncHandler(async (req, res) => {
     .map((p) => ({ ...p, marginPct: p.revenue > 0 ? (p.profit / p.revenue) * 100 : 0 }))
     .sort((a, b) => b.revenue - a.revenue);
 
-  res.render('reports/products', { year, month, rows });
+  res.render('reports/products', { period, year, month, week, wValue, rows });
 }));
 
 router.get('/categories', asyncHandler(async (req, res) => {
-  const { year, month, from, to } = monthRange(req);
+  const { period, year, month, week, wValue, from, to } = periodRange(req);
 
   const saleItems = await prisma.saleItem.findMany({
     where: { sale: { createdAt: { gte: from, lt: to }, voided: false } },
@@ -320,7 +359,7 @@ router.get('/categories', asyncHandler(async (req, res) => {
     .sort((a, b) => b.revenue - a.revenue);
   const total = rows.reduce((s, r) => s + r.revenue, 0);
 
-  res.render('reports/categories', { year, month, rows, total });
+  res.render('reports/categories', { period, year, month, week, wValue, rows, total });
 }));
 
 router.get('/critical-stock', asyncHandler(async (req, res) => {

@@ -329,7 +329,7 @@ function openPayModal(type) {
 }
 
 document.getElementById('pay-modal').addEventListener('hidden.bs.modal', () => {
-  barcodeInput.focus();
+  searchInput.focus();
 });
 
 document.getElementById('customer-search').addEventListener('input', function () {
@@ -425,7 +425,7 @@ document.getElementById('success-print-btn').addEventListener('click', () => {
 });
 
 document.getElementById('success-modal').addEventListener('hidden.bs.modal', () => {
-  barcodeInput.focus();
+  searchInput.focus();
 });
 
 // ---------- Kamera ilə barkod skan ----------

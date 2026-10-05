@@ -4,7 +4,17 @@
   <h3>Kateqoriya üzrə satış</h3>
   <%- include('_subnav', { active: 'categories' }) %>
 
+  <div class="btn-group mb-3" role="group">
+    <a href="?period=month" class="btn btn-sm <%= period === 'month' ? 'btn-primary' : 'btn-outline-primary' %>">Aylıq</a>
+    <a href="?period=week" class="btn btn-sm <%= period === 'week' ? 'btn-primary' : 'btn-outline-primary' %>">Həftəlik</a>
+  </div>
+
   <form method="get" class="d-flex gap-2 mb-4" style="max-width: 300px;">
+    <% if (period === 'week') { %>
+    <input type="hidden" name="period" value="week">
+    <input type="week" name="w" value="<%= wValue %>" class="form-control" onchange="this.form.submit()">
+    <% } else { %>
+    <input type="hidden" name="period" value="month">
     <select name="month" class="form-select" onchange="this.form.submit()">
       <% for (let m = 1; m <= 12; m++) { %>
       <option value="<%= m %>" <%= m === month ? 'selected' : '' %>><%= m %></option>
@@ -15,6 +25,7 @@
       <option value="<%= y %>" <%= y === year ? 'selected' : '' %>><%= y %></option>
       <% } %>
     </select>
+    <% } %>
   </form>
 
   <div class="table-responsive" style="max-width: 640px;">
@@ -29,7 +40,7 @@
       </tr>
       <% }) %>
       <% if (!rows.length) { %>
-      <tr><td colspan="3" class="text-center text-muted py-4">Bu ayda satış yoxdur</td></tr>
+      <tr><td colspan="3" class="text-center text-muted py-4">Bu <%= period === 'week' ? 'həftədə' : 'ayda' %> satış yoxdur</td></tr>
       <% } %>
     </tbody>
     <% if (rows.length) { %>
