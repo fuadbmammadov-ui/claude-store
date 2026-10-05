@@ -1,0 +1,130 @@
+<%- include('../partials/head', { title: 'Sabit xərclər' }) %>
+<%- include('../partials/nav') %>
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Sabit xərclər</h3>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#new-template-modal">+ Yeni şablon</button>
+  </div>
+  <p class="text-muted">Bu şablonlardan hər ay (və ya dövr üçün) avtomatik öhdəlik yaranır — bax <a href="/commitments">Öhdəliklər</a>.</p>
+
+  <div class="table-responsive">
+  <table class="table bg-white align-middle">
+    <thead><tr><th>Ad</th><th>Qrup</th><th>Məbləğ</th><th>Dövr</th><th>Başlama tarixi</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      <% templates.forEach(t => { %>
+      <tr class="<%= t.active ? '' : 'text-muted' %>">
+        <td><%= t.name %></td>
+        <td><%= t.group %></td>
+        <td><%= money(t.amount) %> ₼</td>
+        <td><%= t.periodMonths %> aylıq</td>
+        <td><%= new Date(t.startDate).toLocaleDateString('az-AZ') %></td>
+        <td>
+          <% if (t.active) { %><span class="badge bg-success">Aktiv</span>
+          <% } else { %><span class="badge bg-secondary">Deaktiv</span><% } %>
+        </td>
+        <td class="d-flex gap-1">
+          <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#edit-template-<%= t.id %>">Redaktə et</button>
+          <% if (t.active) { %>
+          <form method="post" action="/fixed-expenses/<%= t.id %>?_method=DELETE" onsubmit="return confirm('Bu şablon deaktiv edilsin? Mövcud öhdəliklər dəyişməyəcək, yalnız gələcək aylar üçün yeni öhdəlik yaranmayacaq.');">
+            <button class="btn btn-sm btn-outline-danger">Deaktiv et</button>
+          </form>
+          <% } else { %>
+          <form method="post" action="/fixed-expenses/<%= t.id %>/activate">
+            <button class="btn btn-sm btn-outline-success">Aktiv et</button>
+          </form>
+          <% } %>
+        </td>
+      </tr>
+      <% }) %>
+      <% if (!templates.length) { %>
+      <tr><td colspan="7" class="text-center text-muted py-4">Hələ şablon yoxdur</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+  </div>
+</div>
+
+<div class="modal" id="new-template-modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="/fixed-expenses">
+        <div class="modal-header">
+          <h5 class="modal-title">Yeni sabit xərc şablonu</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Ad</label>
+            <input type="text" name="name" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Qrup</label>
+            <select name="group" class="form-select">
+              <% groups.forEach(g => { %><option value="<%= g %>"><%= g %></option><% }) %>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Məbləğ (₼)</label>
+            <input type="number" step="0.01" min="0.01" name="amount" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Dövr (neçə ay üçündür?)</label>
+            <input type="number" step="1" min="1" name="periodMonths" class="form-control" value="1">
+            <div class="form-text">Aylıq öhdəlik üçün 1. Rüblük (3 ayda bir) üçün 3.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Başlama tarixi</label>
+            <input type="date" name="startDate" class="form-control" value="<%= new Date().toISOString().slice(0,10) %>" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Əlavə et</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<% templates.forEach(t => { %>
+<div class="modal" id="edit-template-<%= t.id %>" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="/fixed-expenses/<%= t.id %>?_method=PUT">
+        <div class="modal-header">
+          <h5 class="modal-title">Redaktə et — <%= t.name %></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Ad</label>
+            <input type="text" name="name" class="form-control" value="<%= t.name %>" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Qrup</label>
+            <select name="group" class="form-select">
+              <% groups.forEach(g => { %><option value="<%= g %>" <%= g === t.group ? 'selected' : '' %>><%= g %></option><% }) %>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Məbləğ (₼)</label>
+            <input type="number" step="0.01" min="0.01" name="amount" class="form-control" value="<%= t.amount %>" required>
+            <div class="form-text">Dəyişiklik yalnız gələcəkdə yaranacaq öhdəliklərə təsir edir — mövcud öhdəliklər öz məbləğini saxlayır.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Dövr (neçə ay üçündür?)</label>
+            <input type="number" step="1" min="1" name="periodMonths" class="form-control" value="<%= t.periodMonths %>">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Başlama tarixi</label>
+            <input type="date" name="startDate" class="form-control" value="<%= new Date(t.startDate).toISOString().slice(0,10) %>" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Yadda saxla</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<% }) %>
+<%- include('../partials/foot') %>

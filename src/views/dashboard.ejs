@@ -89,34 +89,39 @@
     </form>
   </div>
 
-  <div class="alert <%= monthNetProfit >= 0 ? 'alert-success' : 'alert-danger' %> fw-bold">
-    Mağaza vəziyyəti: <%= monthNetProfit >= 0 ? '✓ MƏNFƏƏTLƏ İŞLƏYİR' : '✗ ZƏRƏRLƏ İŞLƏYİR' %>
+  <%
+    const dashVariant = report.netColor === 'green' ? 'success' : report.netColor === 'yellow' ? 'warning' : 'danger';
+    const dashStatusText = report.netColor === 'green' ? '✓ MƏNFƏƏTLƏ İŞLƏYİR' : report.netColor === 'yellow' ? '△ EHTİYAT AZDIR' : '✗ ZƏRƏRLƏ İŞLƏYİR';
+  %>
+  <div class="alert alert-<%= dashVariant %> fw-bold">
+    Mağaza vəziyyəti: <%= dashStatusText %>
     (<%= month %>.<%= year %>)
+    <% if (report.reservePct != null) { %> — ehtiyat <%= (report.reservePct * 100).toFixed(1) %>%<% } %>
   </div>
 
   <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
       <div class="card p-3 text-center">
         <div class="text-muted small">Aylıq satış</div>
-        <div class="fs-5 fw-bold"><%= money(monthRevenue) %> ₼</div>
+        <div class="fs-5 fw-bold"><%= money(report.revenue) %> ₼</div>
       </div>
     </div>
     <div class="col-6 col-md-3">
       <div class="card p-3 text-center">
-        <div class="text-muted small">Ümumi mənfəət (marja)</div>
-        <div class="fs-5 fw-bold"><%= money(monthGrossProfit) %> ₼</div>
+        <div class="text-muted small">Marja</div>
+        <div class="fs-5 fw-bold"><%= money(report.marja) %> ₼</div>
       </div>
     </div>
     <div class="col-6 col-md-3">
       <div class="card p-3 text-center">
-        <div class="text-muted small">Xərclər</div>
-        <div class="fs-5 fw-bold text-danger"><%= money(monthExpenseTotal) %> ₼</div>
+        <div class="text-muted small">Sabit + Gündəlik xərc</div>
+        <div class="fs-5 fw-bold text-danger"><%= money(report.sabitXerc + report.gundelikXerc) %> ₼</div>
       </div>
     </div>
     <div class="col-6 col-md-3">
       <div class="card p-3 text-center">
         <div class="text-muted small">Net mənfəət</div>
-        <div class="fs-5 fw-bold <%= monthNetProfit >= 0 ? 'text-success' : 'text-danger' %>"><%= money(monthNetProfit) %> ₼</div>
+        <div class="fs-5 fw-bold text-<%= dashVariant %>"><%= money(report.net) %> ₼</div>
       </div>
     </div>
   </div>

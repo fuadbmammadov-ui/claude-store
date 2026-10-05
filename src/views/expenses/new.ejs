@@ -6,8 +6,23 @@
   <% if (added) { %>
   <div class="alert alert-success">Xərc uğurla qeyd olundu.</div>
   <% } %>
+  <% if (warnOverpay) { %>
+  <div class="alert alert-warning">Diqqət: bağladığınız öhdəliyin qalığından artıq məbləğ ödədiniz.</div>
+  <% } %>
 
   <form method="post" action="/expenses" class="card p-4 mt-3">
+    <div class="mb-3">
+      <label class="form-label">Öhdəliyə bağla <span class="text-muted">(könüllü)</span></label>
+      <select name="commitmentId" class="form-select">
+        <option value="">— bağlama (adi xərc) —</option>
+        <% openCommitments.forEach(r => { %>
+        <option value="<%= r.commitment.id %>" <%= preselectedCommitmentId === r.commitment.id ? 'selected' : '' %>>
+          <%= r.commitment.name %> – <%= r.monthLabel %> (qalıq <%= money(r.qalıq) %> ₼)
+        </option>
+        <% }) %>
+      </select>
+      <div class="form-text">Seçsəniz, bu ödəniş həmin öhdəliyə düşəcək və hesabatda ikinci dəfə sayılmayacaq.</div>
+    </div>
     <div class="mb-3">
       <label class="form-label">Kateqoriya</label>
       <select name="category" class="form-select">

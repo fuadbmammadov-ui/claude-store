@@ -3,6 +3,7 @@ const prisma = require('../config/db');
 const { requireRole } = require('../middleware/auth');
 const asyncHandler = require('../utils/asyncHandler');
 const { getMonthlyExpenseBreakdown } = require('../utils/expenseAmortization');
+const { buildReport, cashFlowForRange, debtSalesForRange } = require('../utils/financeData');
 
 const router = express.Router();
 
@@ -45,6 +46,23 @@ function parseIsoWeekParam(w) {
   const m = /^(\d{4})-W(\d{2})$/.exec(w || '');
   if (!m) return null;
   return { year: Number(m[1]), week: Number(m[2]) };
+}
+
+function mondayOfWeek(date) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const dow = d.getUTCDay() || 7; // Mon=1..Sun=7
+  d.setUTCDate(d.getUTCDate() - dow + 1);
+  return d;
+}
+
+function toIsoWeekParam(date) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum); // nearest Thursday decides the ISO week-year
+  const isoYear = d.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(isoYear, 0, 1));
+  const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  return `${isoYear}-W${String(week).padStart(2, '0')}`;
 }
 
 // Unifies month- and week-based report filtering behind one query param set.
@@ -98,8 +116,14 @@ router.get('/daily', asyncHandler(async (req, res) => {
   });
   const totalPurchases = receiptsToday.reduce((s, r) => s + Number(r.quantity) * Number(r.purchasePrice), 0);
 
-  const expensesToday = await prisma.expense.findMany({ where: { createdAt: { gte: from, lte: to } } });
-  const totalExpensesToday = expensesToday.reduce((s, e) => s + Number(e.amount), 0);
+  // [from, to] above is inclusive end-of-day (23:59:59.999); the shared engine wants a
+  // half-open [from, to) range, so give it the start of the next day as the exclusive end.
+  const reportTo = new Date(to.getTime() + 1);
+  const [report, cashFlow, debtSales] = await Promise.all([
+    buildReport(prisma, from, reportTo),
+    cashFlowForRange(prisma, from, reportTo),
+    debtSalesForRange(prisma, from, reportTo),
+  ]);
 
   res.render('reports/daily', {
     from: from.toISOString().slice(0, 10),
@@ -108,8 +132,9 @@ router.get('/daily', asyncHandler(async (req, res) => {
     totals,
     receiptsToday,
     totalPurchases,
-    expensesToday,
-    totalExpensesToday,
+    report,
+    cashFlow,
+    debtSales,
     paymentLabel,
   });
 }));
@@ -117,47 +142,105 @@ router.get('/daily', asyncHandler(async (req, res) => {
 router.get('/monthly', asyncHandler(async (req, res) => {
   const { year, month, from, to, daysInMonth } = monthRange(req);
 
-  const [saleItems, sales, { total: expenseTotal }, supplierDebtRows, activeProducts] = await Promise.all([
+  const [saleItems, sales, supplierDebtRows, activeProducts, report, cashFlow, periodDebtSales] = await Promise.all([
     prisma.saleItem.findMany({ where: { sale: { createdAt: { gte: from, lt: to }, voided: false } } }),
     prisma.sale.findMany({ where: { createdAt: { gte: from, lt: to }, voided: false } }),
-    getMonthlyExpenseBreakdown(prisma, year, month),
     prisma.stockReceipt.findMany({ where: { status: 'DEBT' }, select: { totalAmount: true, paidAmount: true } }),
     prisma.product.findMany({ where: { active: true }, select: { quantity: true, purchasePrice: true } }),
+    buildReport(prisma, from, to),
+    cashFlowForRange(prisma, from, to),
+    debtSalesForRange(prisma, from, to),
   ]);
 
   const revenue = saleItems.reduce((s, it) => s + Number(it.lineTotal), 0);
   const cogs = saleItems.reduce((s, it) => s + Number(it.purchasePrice) * Number(it.quantity), 0);
   const grossProfit = revenue - cogs;
   const grossMarginPct = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
-  const netProfit = grossProfit - expenseTotal;
-  const netMarginPct = revenue > 0 ? (netProfit / revenue) * 100 : 0;
 
   const cashSales = sales.filter((s) => s.paymentType === 'CASH').reduce((s, x) => s + Number(x.paidAmount), 0);
   const cardSales = sales.filter((s) => s.paymentType === 'CARD').reduce((s, x) => s + Number(x.paidAmount), 0);
   const transferSales = sales.filter((s) => s.paymentType === 'TRANSFER').reduce((s, x) => s + Number(x.paidAmount), 0);
-  const debtSales = sales.filter((s) => s.paymentType === 'DEBT').reduce((s, x) => s + Number(x.totalAmount), 0);
 
   const supplierDebtTotal = supplierDebtRows.reduce((s, r) => s + (Number(r.totalAmount) - Number(r.paidAmount)), 0);
   const inventoryValue = activeProducts.reduce((s, p) => s + Number(p.quantity) * Number(p.purchasePrice), 0);
 
-  const cashFlowEstimate = netProfit;
-
-  const fixedCosts = expenseTotal;
-  const breakEvenSales = grossMarginPct > 0 ? fixedCosts / (grossMarginPct / 100) : 0;
-  const dailyTarget = breakEvenSales / daysInMonth;
   const salesCount = sales.length;
   const avgDailySale = revenue / daysInMonth;
   const avgTransactionValue = salesCount > 0 ? revenue / salesCount : 0;
   const inventoryTurnover = inventoryValue > 0 ? cogs / inventoryValue : 0;
-  const status = netProfit >= 0 ? 'MƏNFƏƏTLİ ✓' : 'ZƏRƏRLƏ İŞLƏYİR ✗';
 
   res.render('reports/monthly', {
     year, month,
-    revenue, cogs, grossProfit, grossMarginPct, expenseTotal, netProfit, netMarginPct,
-    cashSales, cardSales, transferSales, debtSales,
-    supplierDebtTotal, inventoryValue, cashFlowEstimate,
-    fixedCosts, breakEvenSales, dailyTarget, avgDailySale, avgTransactionValue,
-    inventoryTurnover, salesCount, status,
+    revenue, cogs, grossProfit, grossMarginPct,
+    cashSales, cardSales, transferSales, debtSales: periodDebtSales,
+    supplierDebtTotal, inventoryValue,
+    avgDailySale, avgTransactionValue, inventoryTurnover, salesCount,
+    report, cashFlow,
+  });
+}));
+
+router.get('/weekly', asyncHandler(async (req, res) => {
+  const now = new Date();
+  let from;
+  let to;
+  let wValue;
+  const customRange = Boolean(req.query.from || req.query.to);
+
+  if (customRange) {
+    const fromDay = req.query.from ? new Date(req.query.from) : now;
+    const toDay = req.query.to ? new Date(req.query.to) : fromDay;
+    from = new Date(Date.UTC(fromDay.getFullYear(), fromDay.getMonth(), fromDay.getDate()));
+    to = new Date(Date.UTC(toDay.getFullYear(), toDay.getMonth(), toDay.getDate()));
+    to.setUTCDate(to.getUTCDate() + 1); // make the "to" day inclusive
+    wValue = toIsoWeekParam(from);
+  } else {
+    const parsed = parseIsoWeekParam(req.query.w);
+    from = parsed ? mondayOfWeek(new Date(Date.UTC(parsed.year, 0, 1 + (parsed.week - 1) * 7))) : mondayOfWeek(now);
+    to = new Date(from);
+    to.setUTCDate(from.getUTCDate() + 7);
+    wValue = toIsoWeekParam(from);
+  }
+
+  const prevWeekFrom = new Date(from);
+  prevWeekFrom.setUTCDate(from.getUTCDate() - 7);
+  const nextWeekFrom = new Date(from);
+  nextWeekFrom.setUTCDate(from.getUTCDate() + 7);
+
+  const [report, cashFlow, debtSales] = await Promise.all([
+    buildReport(prisma, from, to),
+    cashFlowForRange(prisma, from, to),
+    debtSalesForRange(prisma, from, to),
+  ]);
+
+  // Son 8 həftənin Satış/Xərc/Net qrafiki — həmişə bu günə əsasən, baxılan həftədən asılı olmayaraq.
+  const WEEKS = 8;
+  const currentMonday = mondayOfWeek(now);
+  const chartLabels = [];
+  const chartRevenue = [];
+  const chartExpense = [];
+  const chartNet = [];
+  for (let i = WEEKS - 1; i >= 0; i--) {
+    const wkFrom = new Date(currentMonday);
+    wkFrom.setUTCDate(currentMonday.getUTCDate() - i * 7);
+    const wkTo = new Date(wkFrom);
+    wkTo.setUTCDate(wkFrom.getUTCDate() + 7);
+    // eslint-disable-next-line no-await-in-loop
+    const wkReport = await buildReport(prisma, wkFrom, wkTo);
+    chartLabels.push(`${String(wkFrom.getUTCDate()).padStart(2, '0')}.${String(wkFrom.getUTCMonth() + 1).padStart(2, '0')}`);
+    chartRevenue.push(wkReport.revenue);
+    chartExpense.push(wkReport.sabitXerc + wkReport.gundelikXerc);
+    chartNet.push(wkReport.net);
+  }
+
+  res.render('reports/weekly', {
+    from: from.toISOString().slice(0, 10),
+    to: new Date(to.getTime() - 1).toISOString().slice(0, 10),
+    wValue,
+    customRange,
+    prevW: toIsoWeekParam(prevWeekFrom),
+    nextW: toIsoWeekParam(nextWeekFrom),
+    report, cashFlow, debtSales,
+    chartLabels, chartRevenue, chartExpense, chartNet,
   });
 }));
 

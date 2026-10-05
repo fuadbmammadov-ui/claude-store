@@ -2,7 +2,7 @@ const express = require('express');
 const prisma = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
 const { requireRole } = require('../middleware/auth');
-const { getMonthlyExpenseBreakdown } = require('../utils/expenseAmortization');
+const { buildReport } = require('../utils/financeData');
 
 const router = express.Router();
 
@@ -38,17 +38,10 @@ router.get('/', asyncHandler(async (req, res) => {
   const lowStockList = lowStock.filter((p) => Number(p.quantity) <= Number(p.minStock));
 
   // --- selected month KPIs ---
-  const monthSaleItems = await prisma.saleItem.findMany({
-    where: { sale: { createdAt: { gte: monthFrom, lt: monthTo }, voided: false } },
-  });
-  const { total: monthExpenseTotal } = await getMonthlyExpenseBreakdown(prisma, year, month);
-
-  const monthRevenue = monthSaleItems.reduce((s, it) => s + Number(it.lineTotal), 0);
-  const monthGrossProfit = monthSaleItems.reduce(
-    (s, it) => s + (Number(it.lineTotal) - Number(it.purchasePrice) * Number(it.quantity)),
-    0
-  );
-  const monthNetProfit = monthGrossProfit - monthExpenseTotal;
+  const [monthSaleItems, report] = await Promise.all([
+    prisma.saleItem.findMany({ where: { sale: { createdAt: { gte: monthFrom, lt: monthTo }, voided: false } } }),
+    buildReport(prisma, monthFrom, monthTo),
+  ]);
 
   const byProduct = {};
   monthSaleItems.forEach((it) => {
@@ -82,10 +75,7 @@ router.get('/', asyncHandler(async (req, res) => {
     lowStockList,
     year,
     month,
-    monthRevenue,
-    monthGrossProfit,
-    monthExpenseTotal,
-    monthNetProfit,
+    report,
     topSelling,
     topProfit,
     supplierDebtTotal,

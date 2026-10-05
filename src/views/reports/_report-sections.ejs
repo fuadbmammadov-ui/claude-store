@@ -1,0 +1,83 @@
+<%
+// Expects locals: report (financeEngine.computeReport output), cashFlow, debtSales.
+const netVariant = report.netColor === 'green' ? 'success' : report.netColor === 'yellow' ? 'warning' : 'danger';
+const groupEntries = Object.entries(report.byGroup).sort((a, b) => b[1] - a[1]);
+%>
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Satış</div><div class="fw-bold"><%= money(report.revenue) %> ₼</div></div></div>
+  <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Marja</div><div class="fw-bold"><%= money(report.marja) %> ₼</div></div></div>
+  <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Sabit xərc</div><div class="fw-bold text-danger"><%= money(report.sabitXerc) %> ₼</div></div></div>
+  <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Gündəlik xərc</div><div class="fw-bold text-danger"><%= money(report.gundelikXerc) %> ₼</div></div></div>
+  <div class="col-6 col-md-2">
+    <div class="card p-3 text-center border-<%= netVariant %>">
+      <div class="text-muted small">Net</div>
+      <div class="fw-bold text-<%= netVariant %>"><%= money(report.net) %> ₼</div>
+      <% if (report.reservePct != null) { %><div class="text-muted" style="font-size:.75rem;">ehtiyat <%= (report.reservePct * 100).toFixed(1) %>%</div><% } %>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <h6>Qruplar üzrə xərc</h6>
+    <div class="table-responsive">
+    <table class="table table-sm bg-white">
+      <tbody>
+        <% groupEntries.forEach(([g, amt]) => { %>
+        <tr><td><%= g %></td><td class="text-end"><%= money(amt) %> ₼</td></tr>
+        <% }) %>
+        <% if (!groupEntries.length) { %><tr><td class="text-muted">Xərc yoxdur</td></tr><% } %>
+      </tbody>
+    </table>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <h6>Zərərsizlik</h6>
+    <p class="mt-2">
+      <% if (report.breakEvenSales == null) { %>
+        Marja mənfi və ya sıfır olduğu üçün zərərsizlik nöqtəsi hesablana bilmir.
+      <% } else { %>
+        Bu dövrdə <strong><%= money(report.breakEvenSales) %> ₼</strong> satmalısınız, hazırda <strong><%= money(report.revenue) %> ₼</strong> satılıb.
+      <% } %>
+    </p>
+  </div>
+</div>
+
+<h6>Öhdəliklər</h6>
+<div class="table-responsive mb-4" style="max-width: 680px;">
+<table class="table table-sm bg-white">
+  <thead><tr><th>Ad</th><th>Qrup</th><th>Hesablanıb</th><th>Ödənib</th><th>Qalıq</th><th>Status</th></tr></thead>
+  <tbody>
+    <% report.commitmentRows.forEach(r => { %>
+    <tr>
+      <td><%= r.commitment.name %></td>
+      <td><%= r.commitment.group %></td>
+      <td><%= money(r.hesablanib) %> ₼</td>
+      <td><%= money(r.odenib) %> ₼</td>
+      <td class="<%= r.qalıq > 0 ? 'text-danger' : '' %>"><%= money(r.qalıq) %> ₼</td>
+      <td>
+        <% if (r.status === 'ödənməyib') { %><span class="badge bg-danger">Ödənməyib</span>
+        <% } else if (r.status === 'qismən') { %><span class="badge bg-warning text-dark">Qismən</span>
+        <% } else { %><span class="badge bg-success">Ödənib</span><% } %>
+      </td>
+    </tr>
+    <% }) %>
+    <% if (!report.commitmentRows.length) { %>
+    <tr><td colspan="6" class="text-center text-muted">Bu dövr üçün öhdəlik yoxdur</td></tr>
+    <% } %>
+  </tbody>
+</table>
+</div>
+
+<h6>Kassa (real pul axını)</h6>
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3"><div class="card p-3 text-center"><div class="text-muted small">Nağd giriş</div><div class="fw-bold"><%= money(cashFlow.cashIn) %> ₼</div></div></div>
+  <div class="col-6 col-md-3"><div class="card p-3 text-center"><div class="text-muted small">Xərc ödənişi (nağd)</div><div class="fw-bold text-danger"><%= money(cashFlow.cashOutExpenses) %> ₼</div></div></div>
+  <div class="col-6 col-md-3"><div class="card p-3 text-center"><div class="text-muted small">Mal alışı (nağd)</div><div class="fw-bold text-danger"><%= money(cashFlow.cashOutSupplier) %> ₼</div></div></div>
+  <div class="col-6 col-md-3"><div class="card p-3 text-center"><div class="text-muted small">Xalis nağd axın</div><div class="fw-bold"><%= money(cashFlow.net) %> ₼</div></div></div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3"><div class="card p-3 text-center"><div class="text-muted small">Borca satış</div><div class="fw-bold text-danger"><%= money(debtSales) %> ₼</div></div></div>
+  <div class="col-6 col-md-3"><div class="card p-3 text-center"><div class="text-muted small">Əsas vəsait alışı</div><div class="fw-bold"><%= money(report.fixedAssetTotal) %> ₼</div></div></div>
+</div>

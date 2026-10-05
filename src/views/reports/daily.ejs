@@ -26,9 +26,10 @@
     <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Qazanc (marja)</div><div class="fw-bold text-success"><%= money(totals.profit) %> ₼</div></div></div>
   </div>
   <div class="row g-3 mb-4">
-    <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Mal alışı</div><div class="fw-bold"><%= money(totalPurchases) %> ₼</div></div></div>
-    <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Xərclər</div><div class="fw-bold text-danger"><%= money(totalExpensesToday) %> ₼</div></div></div>
+    <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Mal alışı (ümumi dəyər)</div><div class="fw-bold"><%= money(totalPurchases) %> ₼</div></div></div>
   </div>
+
+  <%- include('_report-sections', { report, cashFlow, debtSales }) %>
 
   <h5>Satışlar (çeklər) — məbləğə klikləyin, məhsulları görün</h5>
   <div class="table-responsive">
@@ -92,26 +93,6 @@
       <% }) %>
       <% if (!receiptsToday.length) { %>
       <tr><td colspan="6" class="text-center text-muted">Bu tarix aralığında mal qəbulu yoxdur</td></tr>
-      <% } %>
-    </tbody>
-  </table>
-  </div>
-
-  <h5 class="mt-4">Xərclər</h5>
-  <div class="table-responsive">
-  <table class="table table-sm bg-white">
-    <thead><tr><th>Vaxt</th><th>Kateqoriya</th><th>Ad</th><th>Məbləğ</th></tr></thead>
-    <tbody>
-      <% expensesToday.forEach(e => { %>
-      <tr>
-        <td><%= new Date(e.createdAt).toLocaleString('az-AZ') %></td>
-        <td><%= e.category %></td>
-        <td><%= e.name %></td>
-        <td><%= money(e.amount) %> ₼</td>
-      </tr>
-      <% }) %>
-      <% if (!expensesToday.length) { %>
-      <tr><td colspan="4" class="text-center text-muted">Bu tarix aralığında xərc yoxdur</td></tr>
       <% } %>
     </tbody>
   </table>

@@ -13,6 +13,8 @@
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/cash-sessions') ? 'active' : '' %>" href="/cash-sessions"><i class="bi bi-cash-coin"></i> Kassa</a></li>
         <% if (currentUser && currentUser.role === 'ADMIN') { %>
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/expenses') ? 'active' : '' %>" href="/expenses"><i class="bi bi-receipt"></i> Xərclər</a></li>
+        <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/fixed-expenses') ? 'active' : '' %>" href="/fixed-expenses"><i class="bi bi-arrow-repeat"></i> Sabit xərclər</a></li>
+        <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/commitments') ? 'active' : '' %>" href="/commitments"><i class="bi bi-journal-check"></i> Öhdəliklər</a></li>
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/suppliers') ? 'active' : '' %>" href="/suppliers"><i class="bi bi-truck"></i> Təchizatçılar</a></li>
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/orders') ? 'active' : '' %>" href="/orders"><i class="bi bi-clipboard-check"></i> Sifarişlər</a></li>
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/reports') ? 'active' : '' %>" href="/reports"><i class="bi bi-bar-chart-line"></i> Hesabatlar</a></li>

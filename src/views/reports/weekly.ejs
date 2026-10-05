@@ -1,0 +1,76 @@
+<%- include('../partials/head', { title: 'Həftəlik hesabat' }) %>
+<%- include('../partials/nav') %>
+<div class="container-fluid py-4">
+  <h3>Həftəlik hesabat</h3>
+  <%- include('_subnav', { active: 'weekly' }) %>
+
+  <div class="d-flex flex-wrap align-items-end gap-4 mb-4">
+    <div>
+      <div class="text-muted small mb-1">Həftə (Bazar ertəsi–Bazar)</div>
+      <div class="d-flex align-items-center gap-2">
+        <a class="btn btn-outline-secondary btn-sm" href="/reports/weekly?w=<%= prevW %>">&laquo; Əvvəlki</a>
+        <form method="get" class="d-inline">
+          <input type="week" name="w" value="<%= wValue %>" class="form-control form-control-sm" onchange="this.form.submit()">
+        </form>
+        <a class="btn btn-outline-secondary btn-sm" href="/reports/weekly?w=<%= nextW %>">Növbəti &raquo;</a>
+      </div>
+      <div class="text-muted small mt-1"><%= from %> — <%= to %></div>
+    </div>
+
+    <form method="get" class="d-flex align-items-end gap-2">
+      <div>
+        <label class="form-label small text-muted mb-1">Xüsusi aralıq — başlanğıc</label>
+        <input type="date" name="from" value="<%= customRange ? from : '' %>" class="form-control form-control-sm">
+      </div>
+      <div>
+        <label class="form-label small text-muted mb-1">Son</label>
+        <input type="date" name="to" value="<%= customRange ? to : '' %>" class="form-control form-control-sm">
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm">Bax</button>
+    </form>
+  </div>
+
+  <%- include('_report-sections', { report, cashFlow, debtSales }) %>
+
+  <h6 class="mt-4">Son 8 həftə — Satış / Xərc / Net</h6>
+  <div class="card p-3 mb-4" style="max-width: 900px;">
+    <div style="height:280px;"><canvas id="chartWeekly"></canvas></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  var INK_MUTED = '#898781';
+  var GRID = '#e1e0d9';
+  var SERIES = { blue: '#2a78d6', orange: '#eb6834', aqua: '#1baf7a' };
+  var moneyFmt = new Intl.NumberFormat('az-AZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  Chart.defaults.font.family = "system-ui, -apple-system, 'Segoe UI', sans-serif";
+  Chart.defaults.color = INK_MUTED;
+
+  new Chart(document.getElementById('chartWeekly'), {
+    type: 'line',
+    data: {
+      labels: <%- JSON.stringify(chartLabels) %>,
+      datasets: [
+        { label: 'Satış', data: <%- JSON.stringify(chartRevenue) %>, borderColor: SERIES.blue, backgroundColor: SERIES.blue, borderWidth: 2, pointRadius: 3, tension: 0.2 },
+        { label: 'Xərc', data: <%- JSON.stringify(chartExpense) %>, borderColor: SERIES.orange, backgroundColor: SERIES.orange, borderWidth: 2, pointRadius: 3, tension: 0.2 },
+        { label: 'Net', data: <%- JSON.stringify(chartNet) %>, borderColor: SERIES.aqua, backgroundColor: SERIES.aqua, borderWidth: 2, pointRadius: 3, tension: 0.2 },
+      ],
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom', labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, pointStyle: 'circle' } },
+        tooltip: { callbacks: { label: function (ctx) { return ctx.dataset.label + ': ' + moneyFmt.format(ctx.parsed.y) + ' ₼'; } } },
+      },
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { grid: { color: GRID }, border: { display: false }, ticks: { font: { size: 11 }, callback: function (v) { return moneyFmt.format(v); } } },
+      },
+    },
+  });
+})();
+</script>
+<%- include('../partials/foot') %>

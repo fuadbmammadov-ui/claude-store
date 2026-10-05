@@ -3,8 +3,16 @@
 <div class="container-fluid py-4">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>Xərclər</h3>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#new-expense-modal">+ Yeni xərc</button>
+    <div class="d-flex gap-2">
+      <a href="/fixed-expenses" class="btn btn-outline-secondary">Sabit xərclər</a>
+      <a href="/commitments" class="btn btn-outline-secondary">Öhdəliklər</a>
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#new-expense-modal">+ Yeni xərc</button>
+    </div>
   </div>
+
+  <% if (warnOverpay) { %>
+  <div class="alert alert-warning">Diqqət: bağlanan öhdəliyin qalığından artıq məbləğ ödənildi.</div>
+  <% } %>
 
   <form class="mb-3" method="get" style="max-width: 220px;">
     <input type="month" name="month" value="<%= monthValue %>" class="form-control" onchange="this.form.submit()">
@@ -27,9 +35,13 @@
     <% }) %>
   </div>
 
+  <%
+    const categoryTypeByName = {};
+    categoryRows.forEach(c => { categoryTypeByName[c.name] = c.type; });
+  %>
   <div class="table-responsive">
   <table class="table bg-white">
-    <thead><tr><th>Tarix</th><th>Kateqoriya</th><th>Ad</th><th>Aylıq məbləğ</th><th>Ödəniş</th><th>Qeyd</th><th>Əlavə edən</th><th></th></tr></thead>
+    <thead><tr><th>Tarix</th><th>Kateqoriya</th><th>Ad</th><th>Aylıq məbləğ</th><th>Ödəniş</th><th>Öhdəlik</th><th>Qeyd</th><th>Əlavə edən</th><th></th></tr></thead>
     <tbody>
       <% expenses.forEach(e => { %>
       <tr>
@@ -50,6 +62,15 @@
           <% } %>
         </td>
         <td><%= e.method === 'CASH' ? 'Nağd' : e.method === 'CARD' ? 'Kart' : e.method === 'TRANSFER' ? 'Köçürmə' : 'Kənardan' %></td>
+        <td>
+          <% if (e.commitmentId) { %>
+          <span class="badge bg-success-subtle text-success-emphasis">Bağlıdır</span>
+          <% } else if (categoryTypeByName[e.category] === 'sabit') { %>
+          <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#link-commitment-<%= e.id %>">Öhdəliyə bağla</button>
+          <% } else { %>
+          <span class="text-muted">-</span>
+          <% } %>
+        </td>
         <td><%= e.note || '-' %></td>
         <td><%= e.createdBy.fullName %></td>
         <td>
@@ -60,12 +81,70 @@
       </tr>
       <% }) %>
       <% if (!expenses.length) { %>
-      <tr><td colspan="8" class="text-center text-muted py-4">Bu ayda xərc qeyd olunmayıb</td></tr>
+      <tr><td colspan="9" class="text-center text-muted py-4">Bu ayda xərc qeyd olunmayıb</td></tr>
       <% } %>
     </tbody>
   </table>
   </div>
+
+  <details class="mb-4">
+    <summary class="mb-2">Kateqoriya tənzimləmələri (qrup / növ)</summary>
+    <% categoryRows.forEach(c => { %>
+    <form id="cat-form-<%= c.id %>" method="post" action="/expenses/categories/<%= c.id %>?_method=PATCH"></form>
+    <% }) %>
+    <div class="table-responsive mt-2" style="max-width: 640px;">
+    <table class="table table-sm bg-white">
+      <thead><tr><th>Kateqoriya</th><th>Qrup</th><th>Növ</th><th></th></tr></thead>
+      <tbody>
+        <% categoryRows.forEach(c => { %>
+        <tr>
+          <td><%= c.name %></td>
+          <td>
+            <select name="group" form="cat-form-<%= c.id %>" class="form-select form-select-sm">
+              <% groups.forEach(g => { %><option value="<%= g %>" <%= g === c.group ? 'selected' : '' %>><%= g %></option><% }) %>
+            </select>
+          </td>
+          <td>
+            <select name="type" form="cat-form-<%= c.id %>" class="form-select form-select-sm">
+              <% categoryTypes.forEach(t => { %><option value="<%= t.value %>" <%= t.value === c.type ? 'selected' : '' %>><%= t.label %></option><% }) %>
+            </select>
+          </td>
+          <td><button form="cat-form-<%= c.id %>" class="btn btn-sm btn-outline-primary">Yadda saxla</button></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    </div>
+  </details>
 </div>
+
+<% expenses.filter(e => !e.commitmentId && categoryTypeByName[e.category] === 'sabit').forEach(e => { %>
+<div class="modal" id="link-commitment-<%= e.id %>" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="/expenses/<%= e.id %>/link-commitment?_method=PATCH">
+        <div class="modal-header">
+          <h5 class="modal-title">Öhdəliyə bağla — <%= e.name %></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label">Öhdəlik</label>
+          <select name="commitmentId" class="form-select" required>
+            <option value="">— seçin —</option>
+            <% openCommitments.forEach(r => { %>
+            <option value="<%= r.commitment.id %>"><%= r.commitment.name %> – <%= r.monthLabel %> (qalıq <%= money(r.qalıq) %> ₼)</option>
+            <% }) %>
+          </select>
+          <div class="form-text">Bu köhnə xərc seçilmiş öhdəliyin ödənişi kimi sayılacaq.</div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Bağla</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<% }) %>
 
 <div class="modal" id="new-expense-modal" tabindex="-1">
   <div class="modal-dialog">
@@ -76,6 +155,15 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Öhdəliyə bağla <span class="text-muted">(könüllü)</span></label>
+            <select name="commitmentId" class="form-select">
+              <option value="">— bağlama (adi xərc) —</option>
+              <% openCommitments.forEach(r => { %>
+              <option value="<%= r.commitment.id %>"><%= r.commitment.name %> – <%= r.monthLabel %> (qalıq <%= money(r.qalıq) %> ₼)</option>
+              <% }) %>
+            </select>
+          </div>
           <div class="mb-3">
             <label class="form-label">Kateqoriya</label>
             <select name="category" class="form-select">
