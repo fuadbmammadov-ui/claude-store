@@ -3,7 +3,11 @@ const prisma = require('../config/db');
 const { requireRole } = require('../middleware/auth');
 const asyncHandler = require('../utils/asyncHandler');
 const { getMonthlyExpenseBreakdown } = require('../utils/expenseAmortization');
-const { buildReport, cashFlowForRange, debtSalesForRange } = require('../utils/financeData');
+const { buildReport, cashFlowForRange, debtSalesForRange, attentionItems, resolveTarget } = require('../utils/financeData');
+const {
+  daysBetween, monthIndex, monthStartFromIndex, productMarginRows, targetProgress,
+  previousPeriodRange, pctDelta,
+} = require('../utils/financeEngine');
 
 const router = express.Router();
 
@@ -79,6 +83,28 @@ function periodRange(req) {
   return { period, year, month, from, to, daysInMonth };
 }
 
+async function buildComparison(prisma, from, to, report, isMonthly) {
+  const { prevFrom, prevElapsedEnd } = previousPeriodRange(from, to, report.elapsedDays, isMonthly);
+  if (prevElapsedEnd <= prevFrom) return null;
+  const prev = await buildReport(prisma, prevFrom, prevElapsedEnd);
+  return {
+    revenue: pctDelta(report.revenue, prev.revenue),
+    marja: pctDelta(report.marja, prev.marja),
+    net: pctDelta(report.net, prev.net),
+    receiptCount: pctDelta(report.receiptCount, prev.receiptCount),
+    avgReceipt: pctDelta(report.avgReceipt, prev.avgReceipt),
+  };
+}
+
+// Resolves the BusinessTarget for the month this period STARTS in (a period that crosses
+// a month boundary is compared against its starting month's target — a known simplification).
+async function targetProgressFor(prisma, from, report) {
+  const target = await resolveTarget(prisma, from.getUTCFullYear(), from.getUTCMonth() + 1);
+  return targetProgress({
+    target, elapsedDays: report.elapsedDays, revenue: report.revenue, gmPct: report.gmPct, avgReceipt: report.avgReceipt,
+  });
+}
+
 router.get('/', (req, res) => res.redirect('/reports/daily'));
 
 router.get('/daily', asyncHandler(async (req, res) => {
@@ -124,6 +150,8 @@ router.get('/daily', asyncHandler(async (req, res) => {
     cashFlowForRange(prisma, from, reportTo),
     debtSalesForRange(prisma, from, reportTo),
   ]);
+  const compare = await buildComparison(prisma, from, reportTo, report, false);
+  const targetInfo = await targetProgressFor(prisma, from, report);
 
   res.render('reports/daily', {
     from: from.toISOString().slice(0, 10),
@@ -135,6 +163,8 @@ router.get('/daily', asyncHandler(async (req, res) => {
     report,
     cashFlow,
     debtSales,
+    compare,
+    targetInfo,
     paymentLabel,
   });
 }));
@@ -151,6 +181,9 @@ router.get('/monthly', asyncHandler(async (req, res) => {
     cashFlowForRange(prisma, from, to),
     debtSalesForRange(prisma, from, to),
   ]);
+  const compare = await buildComparison(prisma, from, to, report, true);
+  const attention = await attentionItems(prisma, from, to);
+  const targetInfo = await targetProgressFor(prisma, from, report);
 
   const revenue = saleItems.reduce((s, it) => s + Number(it.lineTotal), 0);
   const cogs = saleItems.reduce((s, it) => s + Number(it.purchasePrice) * Number(it.quantity), 0);
@@ -175,7 +208,7 @@ router.get('/monthly', asyncHandler(async (req, res) => {
     cashSales, cardSales, transferSales, debtSales: periodDebtSales,
     supplierDebtTotal, inventoryValue,
     avgDailySale, avgTransactionValue, inventoryTurnover, salesCount,
-    report, cashFlow,
+    report, cashFlow, compare, attention, targetInfo,
   });
 }));
 
@@ -211,6 +244,9 @@ router.get('/weekly', asyncHandler(async (req, res) => {
     cashFlowForRange(prisma, from, to),
     debtSalesForRange(prisma, from, to),
   ]);
+  const compare = await buildComparison(prisma, from, to, report, false);
+  const attention = await attentionItems(prisma, from, to);
+  const targetInfo = await targetProgressFor(prisma, from, report);
 
   // Son 8 həftənin Satış/Xərc/Net qrafiki — həmişə bu günə əsasən, baxılan həftədən asılı olmayaraq.
   const WEEKS = 8;
@@ -239,7 +275,7 @@ router.get('/weekly', asyncHandler(async (req, res) => {
     customRange,
     prevW: toIsoWeekParam(prevWeekFrom),
     nextW: toIsoWeekParam(nextWeekFrom),
-    report, cashFlow, debtSales,
+    report, cashFlow, debtSales, compare, attention, targetInfo,
     chartLabels, chartRevenue, chartExpense, chartNet,
   });
 }));
@@ -393,12 +429,23 @@ router.get('/trends', asyncHandler(async (req, res) => {
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 5);
 
+  // Zərərsizlik və hədəf xətləri üçün cari ayın gündəlik normaları (chartDaily üçün üfüqi xətlər).
+  const utcMonthStart = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1));
+  const utcMonthEnd = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1));
+  const [currentMonthReport, currentTarget] = await Promise.all([
+    buildReport(prisma, utcMonthStart, utcMonthEnd),
+    resolveTarget(prisma, now.getFullYear(), now.getMonth() + 1),
+  ]);
+  const dailyBreakevenLine = currentMonthReport.breakEvenFull != null ? currentMonthReport.breakEvenFull / daysInMonth : null;
+  const dailyTargetLine = currentTarget ? Number(currentTarget.salesTarget) / daysInMonth : null;
+
   res.render('reports/trends', {
     dailyLabels, dailyValues, dailyNetValues,
     monthlyLabels, monthlyValues,
     monthToDateRevenue, daysElapsed, daysInMonth,
     dailyRunRate, projectedMonthRevenue, annualRunRate,
     financeTrend, paymentBreakdown, topProducts,
+    dailyBreakevenLine, dailyTargetLine,
   });
 }));
 
@@ -407,21 +454,11 @@ router.get('/products', asyncHandler(async (req, res) => {
 
   const saleItems = await prisma.saleItem.findMany({ where: { sale: { createdAt: { gte: from, lt: to }, voided: false } } });
 
-  const byProduct = {};
-  saleItems.forEach((it) => {
-    const key = it.productName;
-    if (!byProduct[key]) byProduct[key] = { name: key, qty: 0, revenue: 0, cost: 0, profit: 0 };
-    const cost = Number(it.purchasePrice) * Number(it.quantity);
-    byProduct[key].qty += Number(it.quantity);
-    byProduct[key].revenue += Number(it.lineTotal);
-    byProduct[key].cost += cost;
-    byProduct[key].profit += Number(it.lineTotal) - cost;
-  });
-  const rows = Object.values(byProduct)
-    .map((p) => ({ ...p, marginPct: p.revenue > 0 ? (p.profit / p.revenue) * 100 : 0 }))
-    .sort((a, b) => b.revenue - a.revenue);
+  const sort = req.query.sort === 'margin_asc' ? 'margin_asc' : 'revenue_desc';
+  const rows = productMarginRows(saleItems)
+    .sort((a, b) => (sort === 'margin_asc' ? a.marginPct - b.marginPct : b.revenue - a.revenue));
 
-  res.render('reports/products', { period, year, month, week, wValue, rows });
+  res.render('reports/products', { period, year, month, week, wValue, rows, sort });
 }));
 
 router.get('/categories', asyncHandler(async (req, res) => {

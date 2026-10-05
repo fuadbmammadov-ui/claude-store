@@ -96,7 +96,7 @@
   <div class="alert alert-<%= dashVariant %> fw-bold">
     Mağaza vəziyyəti: <%= dashStatusText %>
     (<%= month %>.<%= year %>)
-    <% if (report.reservePct != null) { %> — ehtiyat <%= (report.reservePct * 100).toFixed(1) %>%<% } %>
+    <% if (report.pace != null) { %> — temp <%= report.pace >= 0 ? '+' : '' %><%= (report.pace * 100).toFixed(0) %>%<% } %>
   </div>
 
   <div class="row g-3 mb-4">

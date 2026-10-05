@@ -18,8 +18,9 @@ const expenseRoutes = require('./routes/expenses');
 const orderRoutes = require('./routes/orders');
 const fixedExpenseRoutes = require('./routes/fixedExpenses');
 const commitmentRoutes = require('./routes/commitments');
+const targetRoutes = require('./routes/targets');
 const { requireLogin } = require('./middleware/auth');
-const { money, qty } = require('./utils/format');
+const { money, qty, qtyReport } = require('./utils/format');
 
 const app = express();
 
@@ -58,6 +59,7 @@ app.use((req, res, next) => {
   res.locals.path = req.path;
   res.locals.money = money;
   res.locals.qty = qty;
+  res.locals.qtyReport = qtyReport;
   res.locals.assetVersion = ASSET_VERSION;
   next();
 });
@@ -75,6 +77,7 @@ app.use('/expenses', requireLogin, expenseRoutes);
 app.use('/orders', requireLogin, orderRoutes);
 app.use('/fixed-expenses', requireLogin, fixedExpenseRoutes);
 app.use('/commitments', requireLogin, commitmentRoutes);
+app.use('/targets', requireLogin, targetRoutes);
 
 app.use((req, res) => {
   res.status(404).render('error', { title: 'Tapılmadı', message: 'Bu səhifə mövcud deyil.' });

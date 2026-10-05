@@ -125,27 +125,54 @@
     },
   };
 
-  // Gündəlik satış - line
+  // Gündəlik satış - line, + zərərsizlik və hədəf üfüqi xətləri (bu ayın gündəlik normaları)
+  var dailyRefCount = <%- JSON.stringify(dailyLabels) %>.length;
+  var dailyBreakevenLine = <%- dailyBreakevenLine != null ? dailyBreakevenLine : 'null' %>;
+  var dailyTargetLine = <%- dailyTargetLine != null ? dailyTargetLine : 'null' %>;
+  var dailyDatasets = [{
+    label: 'Satış',
+    data: <%- JSON.stringify(dailyValues) %>,
+    borderColor: SERIES.blue,
+    backgroundColor: 'rgba(42,120,214,0.08)',
+    borderWidth: 2,
+    pointRadius: 0,
+    pointHoverRadius: 4,
+    pointHoverBackgroundColor: SERIES.blue,
+    tension: 0.25,
+    fill: true,
+  }];
+  if (dailyBreakevenLine != null) {
+    dailyDatasets.push({
+      label: 'Zərərsizlik (gündəlik)',
+      data: new Array(dailyRefCount).fill(dailyBreakevenLine),
+      borderColor: SERIES.orange,
+      borderWidth: 1.5,
+      borderDash: [6, 4],
+      pointRadius: 0,
+      fill: false,
+    });
+  }
+  if (dailyTargetLine != null) {
+    dailyDatasets.push({
+      label: 'Hədəf (gündəlik)',
+      data: new Array(dailyRefCount).fill(dailyTargetLine),
+      borderColor: SERIES.yellow,
+      borderWidth: 1.5,
+      borderDash: [2, 3],
+      pointRadius: 0,
+      fill: false,
+    });
+  }
   new Chart(document.getElementById('chartDaily'), {
     type: 'line',
     data: {
       labels: <%- JSON.stringify(dailyLabels) %>,
-      datasets: [{
-        data: <%- JSON.stringify(dailyValues) %>,
-        borderColor: SERIES.blue,
-        backgroundColor: 'rgba(42,120,214,0.08)',
-        borderWidth: 2,
-        pointRadius: 0,
-        pointHoverRadius: 4,
-        pointHoverBackgroundColor: SERIES.blue,
-        tension: 0.25,
-        fill: true,
-      }],
+      datasets: dailyDatasets,
     },
     options: {
       plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: function (ctx) { return fmt(ctx.parsed.y); } } },
+        legend: { display: dailyDatasets.length > 1, position: 'bottom', labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, pointStyle: 'circle' } },
+        tooltip: { callbacks: { label: function (ctx) { return ctx.dataset.label + ': ' + fmt(ctx.parsed.y); } } },
       },
       interaction: { mode: 'index', intersect: false },
       scales: baseScales,

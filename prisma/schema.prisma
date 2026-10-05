@@ -300,3 +300,18 @@ model CashSession {
   closingAmountActual Decimal?  @db.Decimal(12, 2)
   note                String?
 }
+
+// Monthly business targets (Hədəflər), admin-editable. A missing month falls back to the
+// previous month's values in the app layer — nothing here enforces that, it's just storage.
+model BusinessTarget {
+  id                   Int      @id @default(autoincrement())
+  year                 Int
+  month                Int
+  salesTarget          Decimal  @db.Decimal(12, 2)
+  grossMarginTargetPct Decimal  @db.Decimal(5, 2)
+  avgTicketTarget      Decimal  @db.Decimal(12, 2)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([year, month])
+}

@@ -1,0 +1,30 @@
+<%
+// Expects local: attention ({ lowMarginProducts, criticalStockCount, agedDebtCount, agedDebtSum }).
+const hasAnything = attention.lowMarginProducts.length || attention.criticalStockCount || attention.agedDebtCount;
+%>
+<% if (hasAnything) { %>
+<h6 class="mt-4">Diqqət tələb edir</h6>
+<div class="card p-3 mb-4" style="max-width: 640px;">
+  <% if (attention.lowMarginProducts.length) { %>
+  <div class="mb-2">
+    <div class="fw-bold text-danger">Margin 10%-dən aşağı (<%= attention.lowMarginProducts.length %> mal)</div>
+    <ul class="mb-0 small">
+      <% attention.lowMarginProducts.slice(0, 5).forEach(p => { %>
+      <li><%= p.name %> — <%= p.marginPct.toFixed(1) %>%</li>
+      <% }) %>
+    </ul>
+    <% if (attention.lowMarginProducts.length > 5) { %><div class="small text-muted">+ daha <%= attention.lowMarginProducts.length - 5 %> mal</div><% } %>
+  </div>
+  <% } %>
+  <% if (attention.criticalStockCount) { %>
+  <div class="mb-2">
+    <a href="/reports/critical-stock" class="text-danger fw-bold">Kritik stok: <%= attention.criticalStockCount %> mal →</a>
+  </div>
+  <% } %>
+  <% if (attention.agedDebtCount) { %>
+  <div>
+    <a href="/customers" class="text-danger fw-bold">30 gündən köhnə borc: <%= attention.agedDebtCount %> müştəri, <%= money(attention.agedDebtSum) %> ₼ →</a>
+  </div>
+  <% } %>
+</div>
+<% } %>

@@ -9,23 +9,27 @@
     <a href="?period=week" class="btn btn-sm <%= period === 'week' ? 'btn-primary' : 'btn-outline-primary' %>">Həftəlik</a>
   </div>
 
-  <form method="get" class="d-flex gap-2 mb-4" style="max-width: 300px;">
+  <form method="get" class="d-flex gap-2 mb-4 flex-wrap" style="max-width: 500px;">
     <% if (period === 'week') { %>
     <input type="hidden" name="period" value="week">
-    <input type="week" name="w" value="<%= wValue %>" class="form-control" onchange="this.form.submit()">
+    <input type="week" name="w" value="<%= wValue %>" class="form-control" style="max-width:180px;" onchange="this.form.submit()">
     <% } else { %>
     <input type="hidden" name="period" value="month">
-    <select name="month" class="form-select" onchange="this.form.submit()">
+    <select name="month" class="form-select" style="max-width:100px;" onchange="this.form.submit()">
       <% for (let m = 1; m <= 12; m++) { %>
       <option value="<%= m %>" <%= m === month ? 'selected' : '' %>><%= m %></option>
       <% } %>
     </select>
-    <select name="year" class="form-select" onchange="this.form.submit()">
+    <select name="year" class="form-select" style="max-width:110px;" onchange="this.form.submit()">
       <% for (let y = year - 2; y <= year + 1; y++) { %>
       <option value="<%= y %>" <%= y === year ? 'selected' : '' %>><%= y %></option>
       <% } %>
     </select>
     <% } %>
+    <select name="sort" class="form-select" style="max-width:200px;" onchange="this.form.submit()">
+      <option value="revenue_desc" <%= sort === 'revenue_desc' ? 'selected' : '' %>>Satış məbləği (azalan)</option>
+      <option value="margin_asc" <%= sort === 'margin_asc' ? 'selected' : '' %>>Margin % artan</option>
+    </select>
   </form>
 
   <div class="table-responsive">
@@ -33,9 +37,9 @@
     <thead><tr><th>Mal</th><th>Satılan miqdar</th><th>Satış məbləği</th><th>Maya dəyəri</th><th>Mənfəət</th><th>Margin %</th></tr></thead>
     <tbody>
       <% rows.forEach(r => { %>
-      <tr>
+      <tr class="<%= r.marginPct < 10 ? 'table-danger' : r.marginPct < 15 ? 'table-warning' : '' %>">
         <td><%= r.name %></td>
-        <td><%= r.qty.toFixed(3) %></td>
+        <td><%= qtyReport(r.qty, r.unit) %></td>
         <td><%= money(r.revenue) %> ₼</td>
         <td><%= money(r.cost) %> ₼</td>
         <td class="<%= r.profit >= 0 ? 'text-success' : 'text-danger' %>"><%= money(r.profit) %> ₼</td>

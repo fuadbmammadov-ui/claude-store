@@ -30,7 +30,8 @@
     </form>
   </div>
 
-  <%- include('_report-sections', { report, cashFlow, debtSales }) %>
+  <%- include('_report-sections', { report, cashFlow, debtSales, compare, targetInfo, showProjection: true }) %>
+  <%- include('_attention', { attention }) %>
 
   <h6 class="mt-4">Son 8 həftə — Satış / Xərc / Net</h6>
   <div class="card p-3 mb-4" style="max-width: 900px;">

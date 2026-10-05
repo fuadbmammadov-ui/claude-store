@@ -1,4 +1,21 @@
-const { computeReport, monthIndex, monthStartFromIndex, commitmentStatus, AZ_MONTH_NAMES } = require('./financeEngine');
+const { computeReport, monthIndex, monthStartFromIndex, commitmentStatus, productMarginRows, AZ_MONTH_NAMES } = require('./financeEngine');
+
+// Resolves the BusinessTarget for (year, month); a missing month falls back to the
+// previous month's row (flagged isDefault so the UI can note it's not this month's own).
+async function resolveTarget(prisma, year, month) {
+  const own = await prisma.businessTarget.findUnique({ where: { year_month: { year, month } } });
+  if (own) return { ...own, isDefault: false };
+
+  const prevIdx = monthIndex(year, month) - 1;
+  const prevDate = monthStartFromIndex(prevIdx);
+  const prev = await prisma.businessTarget.findUnique({
+    where: { year_month: { year: prevDate.getUTCFullYear(), month: prevDate.getUTCMonth() + 1 } },
+  });
+  return prev ? { ...prev, isDefault: true } : null;
+}
+
+const LOW_MARGIN_THRESHOLD = 10;
+const AGED_DEBT_DAYS = 30;
 
 const LEGACY_LOOKBACK_MONTHS = 60;
 
@@ -86,7 +103,7 @@ async function buildReport(prisma, from, to) {
 
   const expenses = [...unlinkedExpenses, ...linkedPayments];
 
-  return computeReport({ from, to, saleItems, expenses, commitments, categoryMap });
+  return computeReport({ from, to, today: new Date(), saleItems, expenses, commitments, categoryMap });
 }
 
 // Recent commitments (± a few months around now) with their live hesablanıb/ödənib/qalıq/
@@ -137,6 +154,41 @@ async function debtSalesForRange(prisma, from, to) {
   return Number(agg._sum.totalAmount || 0);
 }
 
+// "Diqqət tələb edir" block for weekly/monthly: low-margin products sold this period,
+// how many products are at/under their critical stock level, and how much customer debt
+// has gone unpaid for more than 30 days — each with enough to link off to its own page.
+async function attentionItems(prisma, from, to) {
+  const [saleItems, criticalCandidates, agedDebtSales] = await Promise.all([
+    prisma.saleItem.findMany({ where: { sale: { createdAt: { gte: from, lt: to }, voided: false } } }),
+    prisma.product.findMany({ where: { active: true, minStock: { not: null } }, select: { quantity: true, minStock: true } }),
+    prisma.sale.findMany({
+      where: {
+        status: 'DEBT',
+        voided: false,
+        createdAt: { lt: new Date(Date.now() - AGED_DEBT_DAYS * 24 * 60 * 60 * 1000) },
+      },
+      select: { customerId: true, totalAmount: true, paidAmount: true },
+    }),
+  ]);
+
+  const lowMarginProducts = productMarginRows(saleItems)
+    .filter((p) => p.revenue > 0 && p.marginPct < LOW_MARGIN_THRESHOLD)
+    .sort((a, b) => a.marginPct - b.marginPct);
+
+  const criticalStockCount = criticalCandidates.filter((p) => Number(p.quantity) <= Number(p.minStock)).length;
+
+  const byCustomer = {};
+  agedDebtSales.forEach((s) => {
+    const owed = Number(s.totalAmount) - Number(s.paidAmount);
+    if (owed <= 0) return;
+    byCustomer[s.customerId] = (byCustomer[s.customerId] || 0) + owed;
+  });
+  const agedDebtCount = Object.keys(byCustomer).length;
+  const agedDebtSum = Object.values(byCustomer).reduce((s, v) => s + v, 0);
+
+  return { lowMarginProducts, criticalStockCount, agedDebtCount, agedDebtSum };
+}
+
 module.exports = {
   ensureCommitmentsForMonth,
   ensureCommitmentsForRange,
@@ -145,4 +197,6 @@ module.exports = {
   recentCommitmentsWithStatus,
   cashFlowForRange,
   debtSalesForRange,
+  attentionItems,
+  resolveTarget,
 };

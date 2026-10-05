@@ -1,21 +1,55 @@
 <%
 // Expects locals: report (financeEngine.computeReport output), cashFlow, debtSales.
+// Optional: showProjection (boolean) — adds the "Proqnoz (dövr sonu)" card (weekly/monthly only).
+// Optional: compare (object of pctDelta values vs previous period, or null) — adds ▲/▼ badges.
 const netVariant = report.netColor === 'green' ? 'success' : report.netColor === 'yellow' ? 'warning' : 'danger';
 const groupEntries = Object.entries(report.byGroup).sort((a, b) => b[1] - a[1]);
+const paceVariant = report.pace == null ? 'secondary' : report.pace >= 0 ? 'success' : report.pace >= -0.10 ? 'warning' : 'danger';
+const cmp = typeof compare !== 'undefined' ? compare : null;
+const ti = typeof targetInfo !== 'undefined' ? targetInfo : null;
+function deltaBadge(val) {
+  if (val == null) return '';
+  const variant = val >= 0 ? 'success' : 'danger';
+  const arrow = val >= 0 ? '▲' : '▼';
+  return `<span class="badge bg-${variant}-subtle text-${variant}-emphasis ms-1" style="font-size:.7rem;">${arrow} ${Math.abs(val * 100).toFixed(0)}%</span>`;
+}
+function targetLine(color, delta) {
+  if (!color || delta == null) return '';
+  const variant = color === 'green' ? 'success' : color === 'yellow' ? 'warning' : 'danger';
+  const sign = delta >= 0 ? '+' : '';
+  return `<div class="text-${variant}" style="font-size:.7rem;">🎯 hədəfə nisbətən ${sign}${(delta * 100).toFixed(0)}%</div>`;
+}
+const unpaidCommitments = report.commitmentRows.filter((r) => r.status !== 'ödənib');
+const qaliqCemi = report.commitmentRows.reduce((s, r) => s + r.qalıq, 0);
+const nearestDue = unpaidCommitments.slice().sort((a, b) => a.commitment.periodEnd - b.commitment.periodEnd)[0];
 %>
-<div class="row g-3 mb-3">
-  <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Satış</div><div class="fw-bold"><%= money(report.revenue) %> ₼</div></div></div>
-  <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Marja</div><div class="fw-bold"><%= money(report.marja) %> ₼</div></div></div>
-  <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Sabit xərc</div><div class="fw-bold text-danger"><%= money(report.sabitXerc) %> ₼</div></div></div>
-  <div class="col-6 col-md-2"><div class="card p-3 text-center"><div class="text-muted small">Gündəlik xərc</div><div class="fw-bold text-danger"><%= money(report.gundelikXerc) %> ₼</div></div></div>
-  <div class="col-6 col-md-2">
+<div class="row g-3 mb-1">
+  <div class="col-6 col-md-3"><div class="card p-3 text-center"><div class="text-muted small">Satış</div><div class="fw-bold"><%= money(report.revenue) %> ₼<%- deltaBadge(cmp && cmp.revenue) %></div><%- ti ? targetLine(ti.salesColor, ti.salesDelta) : '' %></div></div>
+  <div class="col-6 col-md-3"><div class="card p-3 text-center"><div class="text-muted small">Ümumi mənfəət</div><div class="fw-bold"><%= money(report.marja) %> ₼ <span class="text-muted" style="font-size:.8rem;">· <%= (report.gmPct * 100).toFixed(1) %>%</span><%- deltaBadge(cmp && cmp.marja) %></div><%- ti ? targetLine(ti.gmColor, ti.gmDelta) : '' %></div></div>
+  <div class="col-6 col-md-3"><div class="card p-3 text-center"><div class="text-muted small">Çek sayı</div><div class="fw-bold"><%= report.receiptCount %><%- deltaBadge(cmp && cmp.receiptCount) %></div></div></div>
+  <div class="col-6 col-md-3"><div class="card p-3 text-center"><div class="text-muted small">Orta çek</div><div class="fw-bold"><%= money(report.avgReceipt) %> ₼<%- deltaBadge(cmp && cmp.avgReceipt) %></div><%- ti ? targetLine(ti.avgColor, ti.avgDelta) : '' %></div></div>
+</div>
+<div class="row g-3 mb-1">
+  <div class="col-6 col-md-3"><div class="card p-3 text-center"><div class="text-muted small">Sabit xərc</div><div class="fw-bold text-danger"><%= money(report.sabitXerc) %> ₼</div></div></div>
+  <div class="col-6 col-md-3"><div class="card p-3 text-center"><div class="text-muted small">Gündəlik xərc</div><div class="fw-bold text-danger"><%= money(report.gundelikXerc) %> ₼</div></div></div>
+  <div class="col-6 col-md-3">
     <div class="card p-3 text-center border-<%= netVariant %>">
       <div class="text-muted small">Net</div>
-      <div class="fw-bold text-<%= netVariant %>"><%= money(report.net) %> ₼</div>
-      <% if (report.reservePct != null) { %><div class="text-muted" style="font-size:.75rem;">ehtiyat <%= (report.reservePct * 100).toFixed(1) %>%</div><% } %>
+      <div class="fw-bold text-<%= netVariant %>"><%= money(report.net) %> ₼<%- deltaBadge(cmp && cmp.net) %></div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card p-3 text-center border-<%= paceVariant %>">
+      <div class="text-muted small">Temp</div>
+      <% if (report.pace == null) { %>
+      <div class="fw-bold text-muted">—</div>
+      <% } else { %>
+      <div class="fw-bold text-<%= paceVariant %>"><%= report.pace >= 0 ? '+' : '' %><%= (report.pace * 100).toFixed(0) %>% <%= report.pace >= 0 ? '✅' : report.pace >= -0.10 ? '⚠️' : '🔻' %></div>
+      <% } %>
     </div>
   </div>
 </div>
+<p class="text-muted mb-4" style="font-size:.8rem;">Sabit xərc keçən <%= report.elapsedDays %>/<%= report.totalDays %> gün üzrə hesablanıb<% if (showProjection && !report.isClosed) { %> — qalan <%= report.remainingDays %> gün hələ bitməyib<% } %>. <% if (cmp) { %>Müqayisə: eyni sayda keçmiş gün, əvvəlki dövrlə.<% } %> <% if (ti && ti.isDefault) { %>🎯 hədəf əvvəlki ayın dəyərlərindəndir (<a href="/targets">dəyiş</a>).<% } %></p>
 
 <div class="row g-3 mb-4">
   <div class="col-md-6">
@@ -33,40 +67,51 @@ const groupEntries = Object.entries(report.byGroup).sort((a, b) => b[1] - a[1]);
   </div>
   <div class="col-md-6">
     <h6>Zərərsizlik</h6>
-    <p class="mt-2">
-      <% if (report.breakEvenSales == null) { %>
+    <p class="mt-2 mb-1">
+      <% if (report.breakEvenFull == null) { %>
         Marja mənfi və ya sıfır olduğu üçün zərərsizlik nöqtəsi hesablana bilmir.
+      <% } else if (report.breakEvenReached) { %>
+        Zərərsizlik keçildi ✅ (+<%= money(report.revenue - report.breakEvenFull) %> ₼)
       <% } else { %>
-        Bu dövrdə <strong><%= money(report.breakEvenSales) %> ₼</strong> satmalısınız, hazırda <strong><%= money(report.revenue) %> ₼</strong> satılıb.
+        Zərərsizlik: <strong><%= money(report.breakEvenFull) %> ₼</strong> ·
+        Satılıb: <strong><%= money(report.revenue) %> ₼</strong> ·
+        Qalan: <strong><%= money(report.remaining) %> ₼</strong>
+        <% if (report.remainingDays > 0) { %> · Qalan günlərdə gündə <strong><%= money(report.dailyNeeded) %> ₼</strong> lazımdır<% } %>
       <% } %>
     </p>
+    <% if (showProjection) { %>
+    <div class="card p-3 mt-3" style="max-width: 360px;">
+      <div class="text-muted small">Proqnoz (dövr sonu)</div>
+      <div>Satış: <strong><%= money(report.projSales) %> ₼</strong></div>
+      <div>Net: <strong class="<%= report.projNet >= 0 ? 'text-success' : 'text-danger' %>"><%= money(report.projNet) %> ₼</strong></div>
+    </div>
+    <% } %>
   </div>
 </div>
 
 <h6>Öhdəliklər</h6>
-<div class="table-responsive mb-4" style="max-width: 680px;">
-<table class="table table-sm bg-white">
-  <thead><tr><th>Ad</th><th>Qrup</th><th>Hesablanıb</th><th>Ödənib</th><th>Qalıq</th><th>Status</th></tr></thead>
-  <tbody>
-    <% report.commitmentRows.forEach(r => { %>
-    <tr>
-      <td><%= r.commitment.name %></td>
-      <td><%= r.commitment.group %></td>
-      <td><%= money(r.hesablanib) %> ₼</td>
-      <td><%= money(r.odenib) %> ₼</td>
-      <td class="<%= r.qalıq > 0 ? 'text-danger' : '' %>"><%= money(r.qalıq) %> ₼</td>
-      <td>
-        <% if (r.status === 'ödənməyib') { %><span class="badge bg-danger">Ödənməyib</span>
-        <% } else if (r.status === 'qismən') { %><span class="badge bg-warning text-dark">Qismən</span>
-        <% } else { %><span class="badge bg-success">Ödənib</span><% } %>
-      </td>
-    </tr>
-    <% }) %>
-    <% if (!report.commitmentRows.length) { %>
-    <tr><td colspan="6" class="text-center text-muted">Bu dövr üçün öhdəlik yoxdur</td></tr>
+<div class="card p-3 mb-4" style="max-width: 560px;">
+  <% if (!report.commitmentRows.length) { %>
+  <div class="text-muted">Bu dövr üçün öhdəlik yoxdur</div>
+  <% } else { %>
+  <div class="d-flex flex-wrap gap-4 mb-2">
+    <div>
+      <div class="text-muted small">Qalıq cəmi</div>
+      <div class="fw-bold <%= qaliqCemi > 0 ? 'text-danger' : '' %>"><%= money(qaliqCemi) %> ₼</div>
+    </div>
+    <div>
+      <div class="text-muted small">Ödənməmiş öhdəlik</div>
+      <div class="fw-bold"><%= unpaidCommitments.length %> / <%= report.commitmentRows.length %></div>
+    </div>
+    <% if (nearestDue) { %>
+    <div>
+      <div class="text-muted small">Ən yaxın</div>
+      <div class="fw-bold"><%= nearestDue.commitment.name %> <span class="text-danger">(<%= money(nearestDue.qalıq) %> ₼)</span></div>
+    </div>
     <% } %>
-  </tbody>
-</table>
+  </div>
+  <% } %>
+  <a href="/commitments" class="btn btn-sm btn-outline-primary align-self-start">Hamısına bax</a>
 </div>
 
 <h6>Kassa (real pul axını)</h6>

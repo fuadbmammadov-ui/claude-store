@@ -17,7 +17,8 @@
     </select>
   </form>
 
-  <%- include('_report-sections', { report, cashFlow, debtSales }) %>
+  <%- include('_report-sections', { report, cashFlow, debtSales, compare, targetInfo, showProjection: true }) %>
+  <%- include('_attention', { attention }) %>
 
   <h5>Əsas maliyyə göstəriciləri</h5>
   <div class="table-responsive" style="max-width: 640px;">
