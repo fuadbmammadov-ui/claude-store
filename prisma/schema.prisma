@@ -47,6 +47,12 @@ enum PurchaseOrderStatus {
   CANCELLED
 }
 
+enum StockCountStatus {
+  DRAFT
+  APPLIED
+  CANCELLED
+}
+
 model User {
   id                Int                 @id @default(autoincrement())
   username          String              @unique
@@ -64,6 +70,9 @@ model User {
   voidedSales       Sale[]              @relation("SaleVoidedBy")
   purchaseOrders    PurchaseOrder[]     @relation("PurchaseOrderCreatedBy")
   confirmedOrders   PurchaseOrder[]     @relation("PurchaseOrderConfirmedBy")
+  stockCountsCreated StockCount[]       @relation("StockCountCreatedBy")
+  stockCountsApplied StockCount[]       @relation("StockCountAppliedBy")
+  stockCountItems    StockCountItem[]   @relation("StockCountItemCountedBy")
 }
 
 model Product {
@@ -86,6 +95,7 @@ model Product {
   saleItems         SaleItem[]
   stockReceipts     StockReceipt[]
   orderItems        PurchaseOrderItem[]
+  stockCountItems   StockCountItem[]
 }
 
 model Supplier {
@@ -314,4 +324,43 @@ model BusinessTarget {
   updatedAt            DateTime @updatedAt
 
   @@unique([year, month])
+}
+
+// Anbar sayımı (audit). Creating one snapshots every active product; counting a line stores
+// the real quantity plus the system quantity *at that moment*. Applying adjusts
+// Product.quantity by (counted - systemQty) so sales made after the line was counted are
+// preserved. Never touches cash: no Expense, StockReceipt or SupplierPayment rows are created.
+model StockCount {
+  id          Int              @id @default(autoincrement())
+  status      StockCountStatus @default(DRAFT)
+  note        String?
+  createdBy   User             @relation("StockCountCreatedBy", fields: [createdById], references: [id])
+  createdById Int
+  createdAt   DateTime         @default(now())
+  appliedBy   User?            @relation("StockCountAppliedBy", fields: [appliedById], references: [id])
+  appliedById Int?
+  appliedAt   DateTime?
+  items       StockCountItem[]
+}
+
+model StockCountItem {
+  id            Int        @id @default(autoincrement())
+  stockCount    StockCount @relation(fields: [stockCountId], references: [id], onDelete: Cascade)
+  stockCountId  Int
+  product       Product    @relation(fields: [productId], references: [id])
+  productId     Int
+  productName   String
+  category      String?
+  unit          Unit
+  purchasePrice Decimal    @db.Decimal(12, 2)
+  systemQty     Decimal    @db.Decimal(12, 3)
+  countedQty    Decimal?   @db.Decimal(12, 3)
+  note          String?
+  countedBy     User?      @relation("StockCountItemCountedBy", fields: [countedById], references: [id])
+  countedById   Int?
+  countedAt     DateTime?
+  appliedDelta  Decimal?   @db.Decimal(12, 3)
+
+  @@unique([stockCountId, productId])
+  @@index([stockCountId])
 }

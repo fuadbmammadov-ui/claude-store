@@ -1,0 +1,113 @@
+<%- include('../partials/head', { title: title }) %>
+<%- include('../partials/nav') %>
+<% const isDraft = count.status === 'DRAFT'; %>
+<div class="container-fluid py-4" id="stock-count" data-count-id="<%= count.id %>" data-editable="<%= isDraft ? '1' : '0' %>">
+  <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div>
+      <h3 class="mb-1">Anbar sayımı #<%= count.id %>
+        <% if (isDraft) { %><span class="badge bg-warning text-dark fs-6 align-middle"><%= STATUS_LABELS[count.status] %></span>
+        <% } else if (count.status === 'APPLIED') { %><span class="badge bg-success fs-6 align-middle"><%= STATUS_LABELS[count.status] %></span>
+        <% } else { %><span class="badge bg-secondary fs-6 align-middle"><%= STATUS_LABELS[count.status] %></span><% } %>
+      </h3>
+      <div class="text-muted small">
+        Açılıb: <%= new Date(count.createdAt).toLocaleString('az-AZ', { timeZone: 'Asia/Baku' }) %> · <%= count.createdBy.fullName %>
+        <% if (count.note) { %> · <%= count.note %><% } %>
+        <% if (count.appliedAt) { %><br>Tətbiq edilib: <%= new Date(count.appliedAt).toLocaleString('az-AZ', { timeZone: 'Asia/Baku' }) %> · <%= count.appliedBy ? count.appliedBy.fullName : '' %><% } %>
+      </div>
+    </div>
+    <div class="d-flex gap-2 no-print">
+      <a href="/stock-counts" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left"></i> Siyahı</a>
+      <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="bi bi-printer"></i> Çap et</button>
+      <% if (isDraft) { %>
+      <form method="post" action="/stock-counts/<%= count.id %>/cancel" onsubmit="return confirm('Sayım ləğv edilsin? Anbarda heç nə dəyişməyəcək.')">
+        <button class="btn btn-outline-danger btn-sm">Ləğv et</button>
+      </form>
+      <% } %>
+    </div>
+  </div>
+
+  <% if (error) { %><div class="alert alert-danger"><%= error %></div><% } %>
+
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3"><div class="card p-3 text-center"><div class="text-muted small">Sayılıb</div><div class="fw-bold fs-5"><span data-sum="counted"><%= summary.counted %></span> / <%= summary.total %></div></div></div>
+    <div class="col-6 col-md-3"><div class="card p-3 text-center"><div class="text-muted small">Uyğun gəlir</div><div class="fw-bold fs-5" data-sum="matched"><%= summary.matched %></div></div></div>
+    <div class="col-6 col-md-3"><div class="card p-3 text-center"><div class="text-muted small">Əskik (alış qiyməti ilə)</div><div class="fw-bold fs-5 text-danger"><span data-sum="shortageCount"><%= summary.shortageCount %></span> mal · <span data-sum="shortageValue"><%= money(summary.shortageValue) %></span> ₼</div></div></div>
+    <div class="col-6 col-md-3"><div class="card p-3 text-center"><div class="text-muted small">Artıq (alış qiyməti ilə)</div><div class="fw-bold fs-5 text-success"><span data-sum="surplusCount"><%= summary.surplusCount %></span> mal · <span data-sum="surplusValue"><%= money(summary.surplusValue) %></span> ₼</div></div></div>
+  </div>
+
+  <% if (isDraft) { %>
+  <div class="alert alert-light border small no-print">
+    Real sayı yazıb <b>Enter</b> basın — avtomatik yadda saxlanılır və növbəti mala keçir. Boş saxlanılan mal "sayılmayıb" sayılır və tətbiq zamanı dəyişmir.
+    Fərq sayın yazıldığı andakı sistem qalığına görə hesablanır; tətbiq zamanı indiki qalığa bu fərq əlavə olunur, beləliklə arada edilən satışlar itmir.
+  </div>
+  <% } %>
+
+  <div class="d-flex gap-2 mb-2 flex-wrap no-print">
+    <input type="search" id="sc-search" class="form-control" style="max-width: 260px;" placeholder="Mal adı ilə axtar">
+    <select id="sc-category" class="form-select" style="max-width: 220px;">
+      <option value="">Bütün kateqoriyalar</option>
+      <% categories.forEach(c => { %><option value="<%= c %>"><%= c %></option><% }) %>
+    </select>
+    <select id="sc-filter" class="form-select" style="max-width: 200px;">
+      <option value="">Hamısı</option>
+      <option value="uncounted">Sayılmayanlar</option>
+      <option value="diff">Fərqi olanlar</option>
+      <option value="shortage">Əskiklər</option>
+      <option value="surplus">Artıqlar</option>
+    </select>
+    <span class="ms-auto small text-muted align-self-center" id="sc-status"></span>
+  </div>
+
+  <div class="table-responsive">
+  <table class="table table-sm bg-white align-middle" id="sc-table">
+    <thead class="table-light"><tr>
+      <th>Malın adı</th><th class="d-none d-md-table-cell">Kateqoriya</th><th class="text-end">Say (sistemdə)</th><th style="width: 140px;">Say (real)</th><th class="text-end">Fərq</th><th>Qeyd</th>
+      <% if (!isDraft) { %><th class="text-end">Anbara tətbiq</th><% } %>
+    </tr></thead>
+    <tbody>
+      <% count.items.forEach(it => {
+           const counted = it.countedQty !== null;
+           const sys = counted || !isDraft ? Number(it.systemQty) : Number(it.product.quantity);
+           const d = itemDelta(it);
+           const unitLabel = it.unit === 'KG' ? 'kq' : 'əd.'; %>
+      <tr data-item-id="<%= it.id %>" data-name="<%= it.productName.toLocaleLowerCase('az-AZ') %>" data-category="<%= it.category || 'Kateqoriyasız' %>"
+          data-unit="<%= it.unit %>" data-state="<%= d === null ? 'uncounted' : (d < 0 ? 'shortage' : (d > 0 ? 'surplus' : 'match')) %>"
+          class="<%= d === null ? '' : (d < 0 ? 'table-danger' : (d > 0 ? 'table-success' : '')) %>">
+        <td><%= it.productName %><% if (it.product && !it.product.active) { %> <span class="badge bg-secondary">deaktiv</span><% } %></td>
+        <td class="text-muted small d-none d-md-table-cell"><%= it.category || '—' %></td>
+        <td class="text-end text-nowrap" data-col="system"><%= qtyReport(sys, it.unit) %><% if (it.unit !== 'KG') { %> <%= unitLabel %><% } %></td>
+        <td>
+          <% if (isDraft) { %>
+          <input type="text" inputmode="decimal" autocomplete="off" class="form-control form-control-sm sc-qty" value="<%= counted ? Number(it.countedQty).toString().replace('.', ',') : '' %>" placeholder="<%= unitLabel %>">
+          <% } else { %>
+          <%= counted ? qtyReport(it.countedQty, it.unit) : '—' %>
+          <% } %>
+        </td>
+        <td class="text-end text-nowrap fw-semibold" data-col="delta"><%= d === null ? '' : (d > 0 ? '+' : '') + qtyReport(d, it.unit) %></td>
+        <td>
+          <% if (isDraft) { %>
+          <input type="text" class="form-control form-control-sm sc-note" maxlength="500" value="<%= it.note || '' %>">
+          <% } else { %><span class="small"><%= it.note || '' %></span><% } %>
+        </td>
+        <% if (!isDraft) { %>
+        <td class="text-end"><%= it.appliedDelta === null ? '—' : (Number(it.appliedDelta) > 0 ? '+' : '') + qtyReport(it.appliedDelta, it.unit) %></td>
+        <% } %>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  </div>
+
+  <% if (isDraft) { %>
+  <form method="post" action="/stock-counts/<%= count.id %>/apply" class="card p-3 mt-3 no-print" id="sc-apply-form">
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+      <div class="small">
+        Tətbiq ediləndə yalnız <b>sayılmış</b> malların qalığı düzəldiləcək. Kassaya, xərclərə və təchizatçı borcuna təsiri yoxdur. Bu əməliyyat geri qaytarılmır.
+      </div>
+      <button type="submit" class="btn btn-success ms-auto"><i class="bi bi-check2-circle"></i> Anbara tətbiq et</button>
+    </div>
+  </form>
+  <% } %>
+</div>
+<script src="/js/stock-count.js?v=<%= assetVersion %>"></script>
+<%- include('../partials/foot') %>

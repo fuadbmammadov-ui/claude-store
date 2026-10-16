@@ -15,6 +15,7 @@ Kiçik mağaza üçün satış, mal qəbulu, borc və kassa idarəetmə sistemi.
 - Mal kateqoriya/alt-kateqoriya təsnifatı
 - Kassa: açılış məbləği, nağd/kart/köçürmə/borc məbləğləri, nağd xərc/təchizatçı ödənişlərinin çıxılması ilə kassada olmalı nağd hesablanması, bağlanışda faktiki say ilə müqayisə
 - Hesabatlar (yalnız Admin): günlük hesabat, aylıq maliyyə analizi (gross/net mənfəət, margin, break-even, inventory turnover), mal üzrə mənfəət, kateqoriya üzrə satış, kritik stok
+- Anbar sayımı / audit (yalnız Admin): bütün malların sistem qalığı ilə siyahısı, real sayın və qeydin yazılması, əskik/artıq fərqlərin alış qiyməti ilə dəyəri, sayılmış malların anbara tətbiqi — kassaya, xərclərə və təchizatçı borcuna təsirsiz
 - Panel: aylıq mənfəət/zərər statusu, ən çox satılan və ən çox mənfəətli mallar
 
 ## Texnologiya

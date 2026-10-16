@@ -1,0 +1,50 @@
+<%- include('../partials/head', { title: 'Anbar sayımı' }) %>
+<%- include('../partials/nav') %>
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h3 class="mb-0">Anbar sayımı (audit)</h3>
+    <% if (openDraft) { %>
+      <a class="btn btn-primary" href="/stock-counts/<%= openDraft.id %>"><i class="bi bi-play-circle"></i> Davam edən sayıma keç (#<%= openDraft.id %>)</a>
+    <% } else { %>
+      <form method="post" action="/stock-counts" class="d-flex gap-2">
+        <input type="text" name="note" class="form-control" placeholder="Qeyd (məs: oktyabr sayımı)" maxlength="200">
+        <button class="btn btn-primary text-nowrap" type="submit"><i class="bi bi-plus-circle"></i> Yeni sayım</button>
+      </form>
+    <% } %>
+  </div>
+
+  <div class="alert alert-info small">
+    Yeni sayım açılanda bütün aktiv mallar sistemdəki qalığı ilə siyahıya düşür. Real sayı yazdıqca yadda saxlanılır.
+    "Anbara tətbiq et" basılanda yalnız sayılmış malların qalığı düzəldilir — <b>kassaya, xərclərə və təchizatçı borcuna heç bir təsiri yoxdur</b>.
+  </div>
+
+  <div class="table-responsive">
+  <table class="table bg-white align-middle">
+    <thead><tr><th>#</th><th>Tarix</th><th>Qeyd</th><th>Status</th><th>Sayılıb</th><th>Əskik</th><th>Artıq</th><th>Açan</th><th>Tətbiq edən</th><th></th></tr></thead>
+    <tbody>
+      <% rows.forEach(({ count: c, summary: s }) => { %>
+      <tr>
+        <td><%= c.id %></td>
+        <td><%= new Date(c.createdAt).toLocaleString('az-AZ', { timeZone: 'Asia/Baku' }) %></td>
+        <td><%= c.note || '—' %></td>
+        <td>
+          <% if (c.status === 'DRAFT') { %><span class="badge bg-warning text-dark"><%= STATUS_LABELS[c.status] %></span>
+          <% } else if (c.status === 'APPLIED') { %><span class="badge bg-success"><%= STATUS_LABELS[c.status] %></span>
+          <% } else { %><span class="badge bg-secondary"><%= STATUS_LABELS[c.status] %></span><% } %>
+        </td>
+        <td><%= s.counted %> / <%= s.total %></td>
+        <td class="text-danger"><%= s.shortageCount %> mal · <%= money(s.shortageValue) %> ₼</td>
+        <td class="text-success"><%= s.surplusCount %> mal · <%= money(s.surplusValue) %> ₼</td>
+        <td><%= c.createdBy ? c.createdBy.fullName : '—' %></td>
+        <td><%= c.appliedBy ? c.appliedBy.fullName + ' · ' + new Date(c.appliedAt).toLocaleString('az-AZ', { timeZone: 'Asia/Baku' }) : '—' %></td>
+        <td><a class="btn btn-sm btn-outline-primary" href="/stock-counts/<%= c.id %>">Ətraflı</a></td>
+      </tr>
+      <% }) %>
+      <% if (!rows.length) { %>
+      <tr><td colspan="10" class="text-center text-muted py-4">Hələ sayım aparılmayıb</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+  </div>
+</div>
+<%- include('../partials/foot') %>

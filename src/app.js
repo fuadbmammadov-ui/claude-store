@@ -19,6 +19,7 @@ const orderRoutes = require('./routes/orders');
 const fixedExpenseRoutes = require('./routes/fixedExpenses');
 const commitmentRoutes = require('./routes/commitments');
 const targetRoutes = require('./routes/targets');
+const stockCountRoutes = require('./routes/stockCounts');
 const { requireLogin } = require('./middleware/auth');
 const { money, qty, qtyReport } = require('./utils/format');
 
@@ -78,6 +79,7 @@ app.use('/orders', requireLogin, orderRoutes);
 app.use('/fixed-expenses', requireLogin, fixedExpenseRoutes);
 app.use('/commitments', requireLogin, commitmentRoutes);
 app.use('/targets', requireLogin, targetRoutes);
+app.use('/stock-counts', requireLogin, stockCountRoutes);
 
 app.use((req, res) => {
   res.status(404).render('error', { title: 'Tapılmadı', message: 'Bu səhifə mövcud deyil.' });
