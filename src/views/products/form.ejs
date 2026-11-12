@@ -83,11 +83,6 @@
       <label class="form-label">Minimum qalıq xəbərdarlığı (könüllü)</label>
       <input type="number" step="0.001" min="0" name="minStock" class="form-control" value="<%= product && product.minStock ? product.minStock : '' %>">
     </div>
-    <div class="mb-3">
-      <label class="form-label">Şəkil linki (könüllü) <span class="text-muted">— onlayn mağazada (/shop) göstərilir</span></label>
-      <input type="url" name="imageUrl" id="imageUrl" class="form-control" placeholder="https://..." value="<%= product && product.imageUrl ? product.imageUrl : '' %>">
-      <img id="imagePreview" src="<%= product && product.imageUrl ? product.imageUrl : '' %>" class="mt-2 rounded border <%= product && product.imageUrl ? '' : 'd-none' %>" style="max-height: 120px;" onerror="this.classList.add('d-none')">
-    </div>
     <div class="mb-3 form-check">
       <input type="checkbox" name="showInShop" id="showInShop" class="form-check-input" <%= product && product.showInShop ? 'checked' : '' %>>
       <label class="form-check-label" for="showInShop">Onlayn mağazada (/shop) göstərilsin</label>
@@ -95,6 +90,27 @@
     </div>
     <button type="submit" class="btn btn-primary">Yadda saxla</button>
   </form>
+
+  <% if (product) { %>
+  <div class="card p-4 mt-3">
+    <h5>Məhsul şəkli</h5>
+    <% if (product.imageUrl) { %>
+    <img src="<%= product.imageUrl %>" class="rounded border mb-3" style="max-height: 160px;" alt="">
+    <% } else { %>
+    <p class="text-muted">Hələ şəkil yüklənməyib.</p>
+    <% } %>
+    <form method="post" action="/products/<%= product.id %>/image" enctype="multipart/form-data" class="d-flex gap-2 align-items-center flex-wrap">
+      <input type="file" name="image" accept="image/*" class="form-control" style="max-width: 320px;" required>
+      <button type="submit" class="btn btn-primary"><%= product.imageUrl ? 'Şəkli dəyiş' : 'Şəkli yüklə' %></button>
+    </form>
+    <% if (product.imageUrl) { %>
+    <form method="post" action="/products/<%= product.id %>/image/delete" class="mt-2">
+      <button type="submit" class="btn btn-outline-danger btn-sm">Şəkli sil</button>
+    </form>
+    <% } %>
+  </div>
+  <% } %>
+
   <% if (!product) { %>
   <script>
     (function () {
@@ -110,20 +126,5 @@
     })();
   </script>
   <% } %>
-  <script>
-    (function () {
-      var imageInput = document.getElementById('imageUrl');
-      var preview = document.getElementById('imagePreview');
-      imageInput.addEventListener('input', function () {
-        var url = imageInput.value.trim();
-        if (url) {
-          preview.src = url;
-          preview.classList.remove('d-none');
-        } else {
-          preview.classList.add('d-none');
-        }
-      });
-    })();
-  </script>
 </div>
 <%- include('../partials/foot') %>

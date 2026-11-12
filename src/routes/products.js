@@ -1,10 +1,21 @@
 const express = require('express');
+const multer = require('multer');
 const prisma = require('../config/db');
 const { requireRole } = require('../middleware/auth');
 const { generateUniqueBarcode, isValidEan13 } = require('../utils/barcode');
 const asyncHandler = require('../utils/asyncHandler');
+const { uploadProductImage, deleteProductImage } = require('../config/cloudinary');
 
 const router = express.Router();
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!/^image\//.test(file.mimetype)) return cb(new Error('Yalnız şəkil faylları qəbul olunur.'));
+    cb(null, true);
+  },
+});
 
 async function findOrCreateSupplier(tx, name) {
   const trimmed = (name || '').trim();
@@ -67,7 +78,7 @@ router.get('/new', asyncHandler(async (req, res) => {
 }));
 
 router.post('/', asyncHandler(async (req, res) => {
-  const { name, category, subCategory, unit, purchasePrice, salePrice, wholesalePrice, quantity, minStock, supplierName, paidAmount, imageUrl, showInShop } = req.body;
+  const { name, category, subCategory, unit, purchasePrice, salePrice, wholesalePrice, quantity, minStock, supplierName, paidAmount, showInShop } = req.body;
   let { barcode } = req.body;
 
   if (!barcode || !barcode.trim()) {
@@ -89,7 +100,6 @@ router.post('/', asyncHandler(async (req, res) => {
         wholesalePrice: wholesalePrice !== '' && wholesalePrice !== undefined ? wholesalePrice : round2(Number(purchasePrice || 0) * 1.15),
         quantity: quantity || 0,
         minStock: minStock ? minStock : null,
-        imageUrl: (imageUrl || '').trim() || null,
         showInShop: showInShop === 'on',
         defaultSupplierId: supplierId,
       },
@@ -224,7 +234,7 @@ router.get('/:id/edit', requireRole('ADMIN'), asyncHandler(async (req, res) => {
 
 router.put('/:id', requireRole('ADMIN'), asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
-  const { name, barcode, category, subCategory, unit, purchasePrice, salePrice, wholesalePrice, quantity, minStock, imageUrl, showInShop } = req.body;
+  const { name, barcode, category, subCategory, unit, purchasePrice, salePrice, wholesalePrice, quantity, minStock, showInShop } = req.body;
   await prisma.product.update({
     where: { id },
     data: {
@@ -238,11 +248,49 @@ router.put('/:id', requireRole('ADMIN'), asyncHandler(async (req, res) => {
       wholesalePrice: wholesalePrice || 0,
       quantity: quantity === '' || quantity === undefined ? undefined : quantity,
       minStock: minStock ? minStock : null,
-      imageUrl: (imageUrl || '').trim() || null,
       showInShop: showInShop === 'on',
     },
   });
   res.redirect(`/products/${id}`);
+}));
+
+router.post('/:id/image', requireRole('ADMIN'), (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) return res.status(400).render('error', { title: 'Yükləmə xətası', message: err.message });
+    next();
+  });
+}, asyncHandler(async (req, res) => {
+  const id = Number(req.params.id);
+  const product = await prisma.product.findUnique({ where: { id } });
+  if (!product) return res.status(404).render('error', { title: 'Tapılmadı', message: 'Mal tapılmadı.' });
+  if (!req.file) return res.status(400).render('error', { title: 'Yükləmə xətası', message: 'Şəkil seçilməyib.' });
+
+  let result;
+  try {
+    result = await uploadProductImage(req.file.buffer, id);
+  } catch (err) {
+    return res.status(502).render('error', { title: 'Cloudinary xətası', message: err.message || 'Şəkil yüklənmədi.' });
+  }
+
+  await prisma.product.update({ where: { id }, data: { imageUrl: result.secure_url } });
+  res.redirect(`/products/${id}/edit`);
+}));
+
+router.post('/:id/image/delete', requireRole('ADMIN'), asyncHandler(async (req, res) => {
+  const id = Number(req.params.id);
+  const product = await prisma.product.findUnique({ where: { id } });
+  if (!product) return res.status(404).render('error', { title: 'Tapılmadı', message: 'Mal tapılmadı.' });
+
+  if (product.imageUrl) {
+    try {
+      await deleteProductImage(id);
+    } catch (err) {
+      // Cloudinary tərəfdə silinmə alınmasa belə, görünüşdən qaldırmaq üçün davam edirik.
+    }
+  }
+
+  await prisma.product.update({ where: { id }, data: { imageUrl: null } });
+  res.redirect(`/products/${id}/edit`);
 }));
 
 router.post('/:id/toggle-shop', requireRole('ADMIN'), asyncHandler(async (req, res) => {

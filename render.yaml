@@ -19,6 +19,15 @@ services:
         sync: false
       - key: TELEGRAM_CHAT_ID
         sync: false
+      # Məhsul şəkilləri Cloudinary-ə yüklənir (bax src/config/cloudinary.js) — dəyərləri
+      # https://console.cloudinary.com Dashboard səhifəsindən Render-in env var bölməsinə
+      # əl ilə daxil edin.
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
       # src/app.js-də server açılışında seed/import-legacy skriptlərinin yenidən işə salınması
       # bu flag-la idarə olunur. Render-in mövcud davranışını pozmamaq üçün "true" saxlanılıb —
       # Render-in buildCommand-ı artıq bu skriptləri işlədir, server boot zamanı təkrar işə
