@@ -67,7 +67,7 @@ router.get('/new', asyncHandler(async (req, res) => {
 }));
 
 router.post('/', asyncHandler(async (req, res) => {
-  const { name, category, subCategory, unit, purchasePrice, salePrice, wholesalePrice, quantity, minStock, supplierName, paidAmount, imageUrl } = req.body;
+  const { name, category, subCategory, unit, purchasePrice, salePrice, wholesalePrice, quantity, minStock, supplierName, paidAmount, imageUrl, showInShop } = req.body;
   let { barcode } = req.body;
 
   if (!barcode || !barcode.trim()) {
@@ -90,6 +90,7 @@ router.post('/', asyncHandler(async (req, res) => {
         quantity: quantity || 0,
         minStock: minStock ? minStock : null,
         imageUrl: (imageUrl || '').trim() || null,
+        showInShop: showInShop === 'on',
         defaultSupplierId: supplierId,
       },
     });
@@ -223,7 +224,7 @@ router.get('/:id/edit', requireRole('ADMIN'), asyncHandler(async (req, res) => {
 
 router.put('/:id', requireRole('ADMIN'), asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
-  const { name, barcode, category, subCategory, unit, purchasePrice, salePrice, wholesalePrice, quantity, minStock, imageUrl } = req.body;
+  const { name, barcode, category, subCategory, unit, purchasePrice, salePrice, wholesalePrice, quantity, minStock, imageUrl, showInShop } = req.body;
   await prisma.product.update({
     where: { id },
     data: {
@@ -238,9 +239,18 @@ router.put('/:id', requireRole('ADMIN'), asyncHandler(async (req, res) => {
       quantity: quantity === '' || quantity === undefined ? undefined : quantity,
       minStock: minStock ? minStock : null,
       imageUrl: (imageUrl || '').trim() || null,
+      showInShop: showInShop === 'on',
     },
   });
   res.redirect(`/products/${id}`);
+}));
+
+router.post('/:id/toggle-shop', requireRole('ADMIN'), asyncHandler(async (req, res) => {
+  const id = Number(req.params.id);
+  const product = await prisma.product.findUnique({ where: { id } });
+  if (!product) return res.status(404).render('error', { title: 'Tapılmadı', message: 'Mal tapılmadı.' });
+  await prisma.product.update({ where: { id }, data: { showInShop: !product.showInShop } });
+  res.redirect(req.get('Referer') || '/products');
 }));
 
 router.delete('/:id', requireRole('ADMIN'), asyncHandler(async (req, res) => {

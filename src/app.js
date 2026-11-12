@@ -23,7 +23,7 @@ const stockCountRoutes = require('./routes/stockCounts');
 const shopRoutes = require('./routes/shop');
 const webOrderRoutes = require('./routes/webOrders');
 const { requireLogin } = require('./middleware/auth');
-const { money, qty, qtyReport } = require('./utils/format');
+const { money, qty, qtyReport, deliverySlotLabel } = require('./utils/format');
 
 const app = express();
 
@@ -63,6 +63,7 @@ app.use((req, res, next) => {
   res.locals.money = money;
   res.locals.qty = qty;
   res.locals.qtyReport = qtyReport;
+  res.locals.deliverySlotLabel = deliverySlotLabel;
   res.locals.assetVersion = ASSET_VERSION;
   next();
 });

@@ -16,7 +16,7 @@
 
   <div class="table-responsive">
   <table class="table table-hover bg-white">
-    <thead><tr><th>#</th><th>Müştəri</th><th>Telefon</th><th>Mal sayı</th><th>Cəmi</th><th>Status</th><th>Tarix</th><th></th></tr></thead>
+    <thead><tr><th>#</th><th>Müştəri</th><th>Telefon</th><th>Mal sayı</th><th>Cəmi</th><th>Status</th><th>Çatdırılma</th><th>Tarix</th><th></th></tr></thead>
     <tbody>
       <% orders.forEach(o => { %>
       <tr>
@@ -31,12 +31,13 @@
           <% } else if (o.status === 'DELIVERED') { %><span class="badge bg-success">Çatdırılıb</span>
           <% } else { %><span class="badge bg-danger">Ləğv edilib</span><% } %>
         </td>
+        <td><%= new Date(o.deliveryDate).toLocaleDateString('az-AZ') %><br><span class="text-muted small"><%= deliverySlotLabel(o.deliveryTimeSlot) %></span></td>
         <td><%= new Date(o.createdAt).toLocaleString('az-AZ') %></td>
         <td><a href="/admin/web-orders/<%= o.id %>" class="btn btn-sm btn-outline-secondary">Ətraflı</a></td>
       </tr>
       <% }) %>
       <% if (!orders.length) { %>
-      <tr><td colspan="8" class="text-center text-muted py-4">Sifariş tapılmadı</td></tr>
+      <tr><td colspan="9" class="text-center text-muted py-4">Sifariş tapılmadı</td></tr>
       <% } %>
     </tbody>
   </table>

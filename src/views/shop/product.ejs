@@ -16,7 +16,6 @@
       <% if (product.category) { %><div class="text-muted mb-2"><%= product.category %></div><% } %>
       <div class="shop-product-price"><%= money(product.salePrice) %> ₼<% if (product.unit === 'KG') { %> <span class="text-muted">/ kq</span><% } %></div>
 
-      <% if (Number(product.quantity) > 0) { %>
       <form method="post" action="/shop/cart/add" class="mt-3 shop-detail-form">
         <input type="hidden" name="productId" value="<%= product.id %>">
         <input type="hidden" name="returnTo" value="/shop/product/<%= product.id %>">
@@ -28,9 +27,6 @@
         </div>
         <button type="submit" class="btn shop-add-btn w-100 btn-lg"><i class="bi bi-cart-plus"></i> Səbətə əlavə et</button>
       </form>
-      <% } else { %>
-      <div class="alert alert-secondary mt-3">Bu məhsul hazırda bitib.</div>
-      <% } %>
     </div>
   </div>
 </div>

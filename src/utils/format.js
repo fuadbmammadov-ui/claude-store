@@ -20,4 +20,14 @@ function qtyReport(value, unit) {
   return Math.round(n).toLocaleString('az-AZ');
 }
 
-module.exports = { money, qty, qtyReport };
+const DELIVERY_SLOT_LABELS = {
+  SLOT_9_13: '09:00 – 13:00',
+  SLOT_13_18: '13:00 – 18:00',
+  SLOT_18_22: '18:00 – 22:00',
+};
+
+function deliverySlotLabel(slot) {
+  return DELIVERY_SLOT_LABELS[slot] || slot;
+}
+
+module.exports = { money, qty, qtyReport, deliverySlotLabel, DELIVERY_SLOT_LABELS };

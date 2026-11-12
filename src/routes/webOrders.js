@@ -18,7 +18,10 @@ router.get('/', asyncHandler(async (req, res) => {
 
 router.get('/:id', asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
-  const order = await prisma.webOrder.findUnique({ where: { id }, include: { items: true } });
+  const order = await prisma.webOrder.findUnique({
+    where: { id },
+    include: { items: { include: { product: true } } },
+  });
   if (!order) return res.status(404).render('error', { title: 'Tapılmadı', message: 'Sifariş tapılmadı.' });
   res.render('web-orders/show', { order });
 }));

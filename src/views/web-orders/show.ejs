@@ -12,6 +12,7 @@
       <% } else { %><span class="badge bg-danger fs-6">Ləğv edilib</span><% } %>
     </div>
     <p class="text-muted">Tarix: <%= new Date(order.createdAt).toLocaleString('az-AZ') %></p>
+    <p class="fw-semibold"><i class="bi bi-truck"></i> Çatdırılma: <%= new Date(order.deliveryDate).toLocaleDateString('az-AZ') %>, <%= deliverySlotLabel(order.deliveryTimeSlot) %></p>
 
     <hr>
     <h6>Müştəri məlumatları</h6>
@@ -23,19 +24,29 @@
     <hr>
     <h6>Məhsullar</h6>
     <table class="table table-sm">
-      <thead><tr><th>Məhsul</th><th>Miqdar</th><th>Qiymət</th><th>Cəmi</th></tr></thead>
+      <thead><tr><th>Məhsul</th><th>Miqdar</th><th>Qiymət</th><th>Cəmi</th><th>Anbarda</th></tr></thead>
       <tbody>
-        <% order.items.forEach(it => { %>
-        <tr>
+        <% order.items.forEach(it => {
+          const available = it.product ? Number(it.product.quantity) : null;
+          const enough = available !== null && available >= Number(it.quantity);
+        %>
+        <tr class="<%= enough ? '' : 'table-danger' %>">
           <td><%= it.productName %></td>
           <td><%= qty(it.quantity, it.unit) %> <%= it.unit === 'KG' ? 'kq' : 'ədəd' %></td>
           <td><%= money(it.unitPrice) %> ₼</td>
           <td><%= money(it.lineTotal) %> ₼</td>
+          <td>
+            <% if (available === null) { %><span class="text-muted">-</span>
+            <% } else { %>
+              <%= qty(available, it.unit) %> <%= it.unit === 'KG' ? 'kq' : 'ədəd' %>
+              <% if (!enough) { %><span class="badge bg-danger ms-1">Kifayət deyil</span><% } %>
+            <% } %>
+          </td>
         </tr>
         <% }) %>
       </tbody>
       <tfoot>
-        <tr><th colspan="3" class="text-end">Cəmi</th><th><%= money(order.totalAmount) %> ₼</th></tr>
+        <tr><th colspan="3" class="text-end">Cəmi</th><th><%= money(order.totalAmount) %> ₼</th><th></th></tr>
       </tfoot>
     </table>
 

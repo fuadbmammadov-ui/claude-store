@@ -24,7 +24,7 @@
         <div class="text-muted small"><%= money(l.product.salePrice) %> ₼<% if (l.product.unit === 'KG') { %> / kq<% } %></div>
         <form method="post" action="/shop/cart/update" class="d-flex align-items-center gap-2 mt-1">
           <input type="hidden" name="productId" value="<%= l.product.id %>">
-          <input type="number" name="quantity" value="<%= l.quantity %>" min="0" step="<%= l.product.unit === 'KG' ? '0.1' : '1' %>" max="<%= l.product.quantity %>" class="form-control form-control-sm shop-cart-qty" onchange="this.form.submit()">
+          <input type="number" name="quantity" value="<%= l.quantity %>" min="0" step="<%= l.product.unit === 'KG' ? '0.1' : '1' %>" class="form-control form-control-sm shop-cart-qty" onchange="this.form.submit()">
           <button type="submit" class="btn btn-sm btn-outline-secondary">Yenilə</button>
         </form>
       </div>

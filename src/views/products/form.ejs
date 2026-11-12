@@ -88,6 +88,11 @@
       <input type="url" name="imageUrl" id="imageUrl" class="form-control" placeholder="https://..." value="<%= product && product.imageUrl ? product.imageUrl : '' %>">
       <img id="imagePreview" src="<%= product && product.imageUrl ? product.imageUrl : '' %>" class="mt-2 rounded border <%= product && product.imageUrl ? '' : 'd-none' %>" style="max-height: 120px;" onerror="this.classList.add('d-none')">
     </div>
+    <div class="mb-3 form-check">
+      <input type="checkbox" name="showInShop" id="showInShop" class="form-check-input" <%= product && product.showInShop ? 'checked' : '' %>>
+      <label class="form-check-label" for="showInShop">Onlayn mağazada (/shop) göstərilsin</label>
+      <div class="form-text">İşarələnməyən mallar müştəriyə <code>/shop</code>-da görünmür.</div>
+    </div>
     <button type="submit" class="btn btn-primary">Yadda saxla</button>
   </form>
   <% if (!product) { %>

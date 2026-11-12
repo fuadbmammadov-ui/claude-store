@@ -35,6 +35,21 @@
       <label class="form-label">Çatdırılma ünvanı (könüllü)</label>
       <textarea name="customerAddress" class="form-control" rows="2"><%= form.customerAddress || '' %></textarea>
     </div>
+    <div class="row">
+      <div class="col-7 mb-3">
+        <label class="form-label">Çatdırılma tarixi *</label>
+        <input type="date" name="deliveryDate" class="form-control" min="<%= minDate %>" value="<%= form.deliveryDate || minDate %>" required>
+      </div>
+      <div class="col-5 mb-3">
+        <label class="form-label">Saat aralığı *</label>
+        <select name="deliveryTimeSlot" class="form-select" required>
+          <option value="" disabled <%= !form.deliveryTimeSlot ? 'selected' : '' %>>Seçin</option>
+          <option value="SLOT_9_13" <%= form.deliveryTimeSlot === 'SLOT_9_13' ? 'selected' : '' %>>09:00–13:00</option>
+          <option value="SLOT_13_18" <%= form.deliveryTimeSlot === 'SLOT_13_18' ? 'selected' : '' %>>13:00–18:00</option>
+          <option value="SLOT_18_22" <%= form.deliveryTimeSlot === 'SLOT_18_22' ? 'selected' : '' %>>18:00–22:00</option>
+        </select>
+      </div>
+    </div>
     <div class="mb-3">
       <label class="form-label">Qeyd (könüllü)</label>
       <textarea name="note" class="form-control" rows="2"><%= form.note || '' %></textarea>

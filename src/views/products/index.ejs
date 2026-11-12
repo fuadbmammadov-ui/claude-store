@@ -50,6 +50,7 @@
           <th>Satış qiyməti</th>
           <th>Topdan qiyməti</th>
           <th>Qalıq</th>
+          <th>Mağazada</th>
           <th></th>
         </tr>
       </thead>
@@ -71,6 +72,11 @@
           <td><%= money(p.salePrice) %> ₼</td>
           <td><%= money(p.wholesalePrice) %> ₼</td>
           <td><%= qty(p.quantity, p.unit) %> <%= p.unit === 'KG' ? 'kq' : 'ədəd' %></td>
+          <td>
+            <form method="post" action="/products/<%= p.id %>/toggle-shop">
+              <button type="submit" class="btn btn-sm <%= p.showInShop ? 'btn-success' : 'btn-outline-secondary' %>"><%= p.showInShop ? 'Bəli' : 'Xeyr' %></button>
+            </form>
+          </td>
           <td class="text-end">
             <a href="/products/<%= p.id %>/receive" class="btn btn-sm btn-outline-success">Mal qəbulu</a>
             <a href="/products/<%= p.id %>/label" class="btn btn-sm btn-outline-secondary">Barkod çap</a>
@@ -78,7 +84,7 @@
         </tr>
         <% }) %>
         <% if (!products.length) { %>
-        <tr><td colspan="10" class="text-center text-muted py-4">Mal tapılmadı</td></tr>
+        <tr><td colspan="11" class="text-center text-muted py-4">Mal tapılmadı</td></tr>
         <% } %>
       </tbody>
     </table>
