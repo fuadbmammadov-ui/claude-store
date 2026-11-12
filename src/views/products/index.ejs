@@ -41,6 +41,7 @@
     <table class="table table-hover bg-white">
       <thead>
         <tr>
+          <th>Şəkil</th>
           <th>Ad</th>
           <th>Kateqoriya</th>
           <th>Barkod</th>
@@ -55,6 +56,11 @@
       <tbody>
         <% products.forEach(p => { %>
         <tr class="<%= p.minStock && Number(p.quantity) <= Number(p.minStock) ? 'table-warning' : '' %>">
+          <td>
+            <% if (p.imageUrl) { %>
+            <img src="<%= p.imageUrl %>" alt="" style="width:36px;height:36px;object-fit:cover;border-radius:4px;" onerror="this.style.display='none'">
+            <% } %>
+          </td>
           <td>
             <a href="/products/<%= p.id %>"><%= p.name %></a>
           </td>
@@ -72,7 +78,7 @@
         </tr>
         <% }) %>
         <% if (!products.length) { %>
-        <tr><td colspan="9" class="text-center text-muted py-4">Mal tapılmadı</td></tr>
+        <tr><td colspan="10" class="text-center text-muted py-4">Mal tapılmadı</td></tr>
         <% } %>
       </tbody>
     </table>

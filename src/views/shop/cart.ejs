@@ -1,0 +1,53 @@
+<%- include('partials/head', { title: 'Səbət' }) %>
+
+<div class="container py-3">
+  <h4 class="mb-3"><i class="bi bi-cart3"></i> Səbətim</h4>
+
+  <% if (!lines.length) { %>
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-cart-x fs-1"></i>
+    <p class="mt-2">Səbətiniz boşdur.</p>
+    <a href="/shop" class="btn shop-add-btn mt-2">Mağazaya qayıt</a>
+  </div>
+  <% } else { %>
+
+  <div class="shop-cart-list">
+    <% lines.forEach(l => { %>
+    <div class="shop-cart-line">
+      <% if (l.product.imageUrl) { %>
+      <img src="<%= l.product.imageUrl %>" alt="" class="shop-cart-line-img" onerror="this.style.display='none'">
+      <% } else { %>
+      <div class="shop-card-img-placeholder shop-cart-line-img"><i class="bi bi-image"></i></div>
+      <% } %>
+      <div class="shop-cart-line-info">
+        <div class="shop-cart-line-name"><%= l.product.name %></div>
+        <div class="text-muted small"><%= money(l.product.salePrice) %> ₼<% if (l.product.unit === 'KG') { %> / kq<% } %></div>
+        <form method="post" action="/shop/cart/update" class="d-flex align-items-center gap-2 mt-1">
+          <input type="hidden" name="productId" value="<%= l.product.id %>">
+          <input type="number" name="quantity" value="<%= l.quantity %>" min="0" step="<%= l.product.unit === 'KG' ? '0.1' : '1' %>" max="<%= l.product.quantity %>" class="form-control form-control-sm shop-cart-qty" onchange="this.form.submit()">
+          <button type="submit" class="btn btn-sm btn-outline-secondary">Yenilə</button>
+        </form>
+      </div>
+      <div class="shop-cart-line-right">
+        <div class="shop-cart-line-total"><%= money(l.lineTotal) %> ₼</div>
+        <form method="post" action="/shop/cart/remove">
+          <input type="hidden" name="productId" value="<%= l.product.id %>">
+          <button type="submit" class="btn btn-sm btn-link text-danger p-0">Sil</button>
+        </form>
+      </div>
+    </div>
+    <% }) %>
+  </div>
+
+  <div class="shop-cart-summary mt-3">
+    <div class="d-flex justify-content-between fs-5 fw-bold">
+      <span>Cəmi</span>
+      <span><%= money(total) %> ₼</span>
+    </div>
+    <a href="/shop/checkout" class="btn shop-add-btn btn-lg w-100 mt-3">Sifarişi tamamla</a>
+    <a href="/shop" class="btn btn-outline-secondary w-100 mt-2">Alış-verişə davam et</a>
+  </div>
+  <% } %>
+</div>
+
+<%- include('partials/foot') %>

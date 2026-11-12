@@ -20,6 +20,8 @@ const fixedExpenseRoutes = require('./routes/fixedExpenses');
 const commitmentRoutes = require('./routes/commitments');
 const targetRoutes = require('./routes/targets');
 const stockCountRoutes = require('./routes/stockCounts');
+const shopRoutes = require('./routes/shop');
+const webOrderRoutes = require('./routes/webOrders');
 const { requireLogin } = require('./middleware/auth');
 const { money, qty, qtyReport } = require('./utils/format');
 
@@ -65,8 +67,11 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use('/shop', shopRoutes);
+
 app.use('/', authRoutes);
 app.use('/', requireLogin, dashboardRoutes);
+app.use('/admin/web-orders', requireLogin, webOrderRoutes);
 app.use('/products', requireLogin, productRoutes);
 app.use('/pos', requireLogin, posRoutes);
 app.use('/customers', requireLogin, customerRoutes);

@@ -11,6 +11,7 @@
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/products') ? 'active' : '' %>" href="/products"><i class="bi bi-box-seam"></i> Mallar</a></li>
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/customers') ? 'active' : '' %>" href="/customers"><i class="bi bi-people"></i> Müştərilər / Borclar</a></li>
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/cash-sessions') ? 'active' : '' %>" href="/cash-sessions"><i class="bi bi-cash-coin"></i> Kassa</a></li>
+        <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/admin/web-orders') ? 'active' : '' %>" href="/admin/web-orders"><i class="bi bi-bag-check"></i> Onlayn sifarişlər</a></li>
         <% if (currentUser && currentUser.role === 'ADMIN') { %>
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/expenses') ? 'active' : '' %>" href="/expenses"><i class="bi bi-receipt"></i> Xərclər</a></li>
         <li class="nav-item"><a class="nav-link <%= path && path.startsWith('/fixed-expenses') ? 'active' : '' %>" href="/fixed-expenses"><i class="bi bi-arrow-repeat"></i> Sabit xərclər</a></li>

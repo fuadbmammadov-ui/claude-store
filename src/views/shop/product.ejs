@@ -1,0 +1,54 @@
+<%- include('partials/head', { title: product.name }) %>
+
+<div class="container py-3">
+  <a href="/shop" class="shop-back-link"><i class="bi bi-arrow-left"></i> Mağazaya qayıt</a>
+
+  <div class="shop-product-detail mt-3">
+    <div class="shop-product-img-wrap">
+      <% if (product.imageUrl) { %>
+      <img src="<%= product.imageUrl %>" alt="<%= product.name %>" class="shop-product-img" onerror="this.style.display='none'">
+      <% } else { %>
+      <div class="shop-card-img-placeholder shop-product-img"><i class="bi bi-image"></i></div>
+      <% } %>
+    </div>
+    <div class="shop-product-info">
+      <h3><%= product.name %></h3>
+      <% if (product.category) { %><div class="text-muted mb-2"><%= product.category %></div><% } %>
+      <div class="shop-product-price"><%= money(product.salePrice) %> ₼<% if (product.unit === 'KG') { %> <span class="text-muted">/ kq</span><% } %></div>
+
+      <% if (Number(product.quantity) > 0) { %>
+      <form method="post" action="/shop/cart/add" class="mt-3 shop-detail-form">
+        <input type="hidden" name="productId" value="<%= product.id %>">
+        <input type="hidden" name="returnTo" value="/shop/product/<%= product.id %>">
+        <label class="form-label small text-muted">Miqdar<% if (product.unit === 'KG') { %> (kq)<% } %></label>
+        <div class="input-group shop-qty-input mb-3">
+          <button type="button" class="btn btn-outline-secondary shop-qty-btn" data-step="-1">−</button>
+          <input type="number" name="quantity" value="1" min="<%= product.unit === 'KG' ? '0.1' : '1' %>" step="<%= product.unit === 'KG' ? '0.1' : '1' %>" class="form-control text-center" id="qtyInput">
+          <button type="button" class="btn btn-outline-secondary shop-qty-btn" data-step="1">+</button>
+        </div>
+        <button type="submit" class="btn shop-add-btn w-100 btn-lg"><i class="bi bi-cart-plus"></i> Səbətə əlavə et</button>
+      </form>
+      <% } else { %>
+      <div class="alert alert-secondary mt-3">Bu məhsul hazırda bitib.</div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var input = document.getElementById('qtyInput');
+    if (!input) return;
+    document.querySelectorAll('.shop-qty-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var step = parseFloat(btn.dataset.step);
+        var val = parseFloat(input.value) || 0;
+        var min = parseFloat(input.min) || 0;
+        var next = Math.round((val + step) * 100) / 100;
+        input.value = next < min ? min : next;
+      });
+    });
+  })();
+</script>
+
+<%- include('partials/foot') %>

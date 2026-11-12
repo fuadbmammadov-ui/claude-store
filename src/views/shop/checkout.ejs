@@ -1,0 +1,47 @@
+<%- include('partials/head', { title: 'Sifarişi tamamla' }) %>
+
+<div class="container py-3" style="max-width: 560px;">
+  <a href="/shop/cart" class="shop-back-link"><i class="bi bi-arrow-left"></i> Səbətə qayıt</a>
+  <h4 class="mt-2 mb-3">Sifarişi tamamla</h4>
+
+  <% if (error) { %>
+  <div class="alert alert-danger"><%= error %></div>
+  <% } %>
+
+  <div class="shop-checkout-summary mb-3">
+    <% lines.forEach(l => { %>
+    <div class="d-flex justify-content-between small py-1">
+      <span><%= l.quantity %> × <%= l.product.name %></span>
+      <span><%= money(l.lineTotal) %> ₼</span>
+    </div>
+    <% }) %>
+    <hr>
+    <div class="d-flex justify-content-between fw-bold">
+      <span>Cəmi</span>
+      <span><%= money(total) %> ₼</span>
+    </div>
+  </div>
+
+  <form method="post" action="/shop/checkout" class="card p-3">
+    <div class="mb-3">
+      <label class="form-label">Ad, Soyad *</label>
+      <input type="text" name="customerName" class="form-control" value="<%= form.customerName || '' %>" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Telefon nömrəsi *</label>
+      <input type="tel" name="customerPhone" class="form-control" placeholder="0XX XXX XX XX" value="<%= form.customerPhone || '' %>" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Çatdırılma ünvanı (könüllü)</label>
+      <textarea name="customerAddress" class="form-control" rows="2"><%= form.customerAddress || '' %></textarea>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Qeyd (könüllü)</label>
+      <textarea name="note" class="form-control" rows="2"><%= form.note || '' %></textarea>
+    </div>
+    <p class="text-muted small">Ödəniş çatdırılma/təhvil zamanı nağd və ya kartla qəbul olunur.</p>
+    <button type="submit" class="btn shop-add-btn btn-lg">Sifarişi təsdiqlə</button>
+  </form>
+</div>
+
+<%- include('partials/foot') %>

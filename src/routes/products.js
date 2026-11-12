@@ -67,7 +67,7 @@ router.get('/new', asyncHandler(async (req, res) => {
 }));
 
 router.post('/', asyncHandler(async (req, res) => {
-  const { name, category, subCategory, unit, purchasePrice, salePrice, wholesalePrice, quantity, minStock, supplierName, paidAmount } = req.body;
+  const { name, category, subCategory, unit, purchasePrice, salePrice, wholesalePrice, quantity, minStock, supplierName, paidAmount, imageUrl } = req.body;
   let { barcode } = req.body;
 
   if (!barcode || !barcode.trim()) {
@@ -89,6 +89,7 @@ router.post('/', asyncHandler(async (req, res) => {
         wholesalePrice: wholesalePrice !== '' && wholesalePrice !== undefined ? wholesalePrice : round2(Number(purchasePrice || 0) * 1.15),
         quantity: quantity || 0,
         minStock: minStock ? minStock : null,
+        imageUrl: (imageUrl || '').trim() || null,
         defaultSupplierId: supplierId,
       },
     });
@@ -222,7 +223,7 @@ router.get('/:id/edit', requireRole('ADMIN'), asyncHandler(async (req, res) => {
 
 router.put('/:id', requireRole('ADMIN'), asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
-  const { name, barcode, category, subCategory, unit, purchasePrice, salePrice, wholesalePrice, quantity, minStock } = req.body;
+  const { name, barcode, category, subCategory, unit, purchasePrice, salePrice, wholesalePrice, quantity, minStock, imageUrl } = req.body;
   await prisma.product.update({
     where: { id },
     data: {
@@ -236,6 +237,7 @@ router.put('/:id', requireRole('ADMIN'), asyncHandler(async (req, res) => {
       wholesalePrice: wholesalePrice || 0,
       quantity: quantity === '' || quantity === undefined ? undefined : quantity,
       minStock: minStock ? minStock : null,
+      imageUrl: (imageUrl || '').trim() || null,
     },
   });
   res.redirect(`/products/${id}`);

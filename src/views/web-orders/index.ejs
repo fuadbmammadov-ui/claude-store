@@ -1,0 +1,45 @@
+<%- include('../partials/head', { title: 'Onlayn sifarişlər' }) %>
+<%- include('../partials/nav') %>
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Onlayn sifarişlər</h3>
+    <a href="/shop" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="bi bi-box-arrow-up-right"></i> Mağazaya bax</a>
+  </div>
+
+  <ul class="nav nav-pills mb-3">
+    <li class="nav-item"><a class="nav-link <%= status === '' ? 'active' : '' %>" href="/admin/web-orders">Hamısı</a></li>
+    <li class="nav-item"><a class="nav-link <%= status === 'PENDING' ? 'active' : '' %>" href="/admin/web-orders?status=PENDING">Yeni</a></li>
+    <li class="nav-item"><a class="nav-link <%= status === 'CONFIRMED' ? 'active' : '' %>" href="/admin/web-orders?status=CONFIRMED">Təsdiqlənib</a></li>
+    <li class="nav-item"><a class="nav-link <%= status === 'DELIVERED' ? 'active' : '' %>" href="/admin/web-orders?status=DELIVERED">Çatdırılıb</a></li>
+    <li class="nav-item"><a class="nav-link <%= status === 'CANCELLED' ? 'active' : '' %>" href="/admin/web-orders?status=CANCELLED">Ləğv edilib</a></li>
+  </ul>
+
+  <div class="table-responsive">
+  <table class="table table-hover bg-white">
+    <thead><tr><th>#</th><th>Müştəri</th><th>Telefon</th><th>Mal sayı</th><th>Cəmi</th><th>Status</th><th>Tarix</th><th></th></tr></thead>
+    <tbody>
+      <% orders.forEach(o => { %>
+      <tr>
+        <td>#<%= o.id %></td>
+        <td><%= o.customerName %></td>
+        <td><%= o.customerPhone %></td>
+        <td><%= o.items.length %></td>
+        <td><%= money(o.totalAmount) %> ₼</td>
+        <td>
+          <% if (o.status === 'PENDING') { %><span class="badge bg-warning text-dark">Yeni</span>
+          <% } else if (o.status === 'CONFIRMED') { %><span class="badge bg-info text-dark">Təsdiqlənib</span>
+          <% } else if (o.status === 'DELIVERED') { %><span class="badge bg-success">Çatdırılıb</span>
+          <% } else { %><span class="badge bg-danger">Ləğv edilib</span><% } %>
+        </td>
+        <td><%= new Date(o.createdAt).toLocaleString('az-AZ') %></td>
+        <td><a href="/admin/web-orders/<%= o.id %>" class="btn btn-sm btn-outline-secondary">Ətraflı</a></td>
+      </tr>
+      <% }) %>
+      <% if (!orders.length) { %>
+      <tr><td colspan="8" class="text-center text-muted py-4">Sifariş tapılmadı</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+  </div>
+</div>
+<%- include('../partials/foot') %>

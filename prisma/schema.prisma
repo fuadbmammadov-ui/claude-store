@@ -53,6 +53,13 @@ enum StockCountStatus {
   CANCELLED
 }
 
+enum WebOrderStatus {
+  PENDING
+  CONFIRMED
+  DELIVERED
+  CANCELLED
+}
+
 model User {
   id                Int                 @id @default(autoincrement())
   username          String              @unique
@@ -87,6 +94,7 @@ model Product {
   wholesalePrice    Decimal        @db.Decimal(12, 2)
   quantity          Decimal        @db.Decimal(12, 3)
   minStock          Decimal?       @db.Decimal(12, 3)
+  imageUrl          String?
   active            Boolean        @default(true)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
@@ -96,6 +104,7 @@ model Product {
   stockReceipts     StockReceipt[]
   orderItems        PurchaseOrderItem[]
   stockCountItems   StockCountItem[]
+  webOrderItems     WebOrderItem[]
 }
 
 model Supplier {
@@ -363,4 +372,37 @@ model StockCountItem {
 
   @@unique([stockCountId, productId])
   @@index([stockCountId])
+}
+
+// Müştərinin /shop vitrinindən (login-siz) verdiyi sifariş. Sale-dən fərqli olaraq kassada
+// deyil, onlayn qeydə alınır və fulfilment əl ilə idarə olunur: PENDING (yeni daxil olub) →
+// CONFIRMED (mağaza zəng edib təsdiqləyib) → DELIVERED (müştəriyə çatdırılıb/təhvil verilib),
+// və ya istənilən vaxt CANCELLED. Heç bir addımda stok və ya kassa avtomatik dəyişmir — bunu
+// mağaza işçisi adi "Mal satışı" (POS) vasitəsilə ayrıca qeydə alır.
+model WebOrder {
+  id              Int             @id @default(autoincrement())
+  customerName    String
+  customerPhone   String
+  customerAddress String?
+  note            String?
+  status          WebOrderStatus  @default(PENDING)
+  totalAmount     Decimal         @db.Decimal(12, 2)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  items           WebOrderItem[]
+}
+
+model WebOrderItem {
+  id          Int      @id @default(autoincrement())
+  webOrder    WebOrder @relation(fields: [webOrderId], references: [id], onDelete: Cascade)
+  webOrderId  Int
+  product     Product  @relation(fields: [productId], references: [id])
+  productId   Int
+  productName String
+  unit        Unit
+  unitPrice   Decimal  @db.Decimal(12, 2)
+  quantity    Decimal  @db.Decimal(12, 3)
+  lineTotal   Decimal  @db.Decimal(12, 2)
+
+  @@index([webOrderId])
 }
